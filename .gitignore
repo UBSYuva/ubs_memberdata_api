@@ -5,11 +5,6 @@ package-lock.json
 # Local git-in-git (accidental clones)
 ubs_memberdata_api/
 
-# Environment variables and secrets
-.env
-google-credentials.json
-google-credentials*.json
-
 # Build and deployment folders
 dist/
 build/
@@ -29,3 +24,7 @@ yarn-error.log*
 *.user
 *.suo
 *.sln.docstates
+
+# Secrets
+.env
+google-credentials.json
