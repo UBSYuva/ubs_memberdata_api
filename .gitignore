@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local git-in-git (accidental clones)
+ubs_memberdata_api/
+
+# Environment variables and secrets
+.env
+google-credentials.json
+google-credentials*.json
+
+# Build and deployment folders
+dist/
+build/
+.vercel/
+.next/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System and editor files
+.DS_Store
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates

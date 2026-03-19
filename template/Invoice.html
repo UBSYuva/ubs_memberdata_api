@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<html lang="gu">
+
+<head>
+    <meta charset="UTF-8" />
+    <style>
+        body {
+            font-family: 'Noto Sans Gujarati', Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            background: #fdfdfd;
+        }
+
+        .receipt-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 10px 20px;
+            border: 2px solid #444;
+            border-radius: 12px;
+            background: white;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+            .logo img {
+                width: 80px;
+            }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+            .header h2 {
+                margin: 8px 0;
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .header h4 {
+                margin: 4px 0;
+                font-size: 15px;
+                color: #555;
+            }
+
+        .info-section {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+            .info-section span.label {
+                font-weight: bold;
+            }
+
+        .highlight-box {
+            margin: 25px 0;
+            padding: 12px 20px;
+            font-size: 18px;
+            border: 2px dashed #888;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+        }
+
+        .footer-note {
+            margin-top: 30px;
+            font-size: 14px;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .signature {
+            text-align: right;
+            margin-top: 40px;
+            font-weight: bold;
+        }
+
+        .line-break {
+            margin-top: 10px;
+        }
+
+        .payment-section {
+            padding: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="receipt-box">
+        <div class="logo">
+            <img src="http://localhost:4200/logo-new.ico" alt="Trust Logo" />
+        </div>
+
+        <div class="header">
+            <h2>શ્રી ઉનેવાળ બ્રહ્મસમાજ સેવા ટ્રસ્ટ, વડોદરા</h2>
+            <h4>રજી. નં.: એ / 330 / વડોદરા | Registered for 80G</h4>
+            <h4>(Unique No.: ABKTS7291QF20251)</h4>
+        </div>
+
+        <div class="info-section" style="text-align: right; margin-top: -10px; margin-bottom: 10px;">
+            <span class="label">તારીખ:</span> #paid-date#
+        </div>
+
+        <div class="info-section">
+            <div><span class="label">કાર્યાલય:</span> ૧૦૫, કૃપા એપાર્ટમેન્ટ, જૂલીબાઈ પાર્ક, વી.આઈ.પી. રોડ, કોરેલીબાગ,
+                વડોદરા-૧૮</div>
+            <div><span class="label">ફોન:</span> ૯૮૨૪૯ ૪૯૬૮૩</div>
+        </div>
+
+        <div class="info-section">
+            <div><span class="label">રસીદ નંબર:</span> #receiptNo#</div>
+            <div><span class="label">સભ્યપદ નંબર:</span> #memberId#</div>
+            <div><span class="label">શ્રીમાન / શ્રીમતી:</span> #name#</div>
+            <div><span class="label">ઠે.:</span> #city#</div>
+            <div><span class="label">ફોન નંબર:</span> #mobile#</div>
+        </div>
+
+        <div class="info-section">
+            આપશ્રી તરફથી <strong>માઁ ના પાટોત્સવ / નવરાત્રી મહોત્સવ</strong> તથા અન્ય સામાજિક પ્રસંગે આપેલ દાનભેટ અમને પ્રાપ્ત થયેલ છે.
+        </div>
+
+        <div class="highlight-box">
+            <div class="payment-section">
+                રૂ. <strong>#amount#</strong> - <strong>#paymentType#</strong> મળ્યા છે.
+            </div>
+            <div class="payment-section">
+                #paymentType-1#  <strong>#paymentNo#</strong>
+            </div>
+        </div>
+
+        <div class="footer-note">(ચેક સ્વીકૃતિ શરતે)</div>
+
+        <div class="signature">
+            શ્રી ઉનેવાળ બ્રહ્મસમાજ સેવા ટ્રસ્ટ, વડોદરા વતી
+        </div>
+    </div>
+</body>
+
+</html>
