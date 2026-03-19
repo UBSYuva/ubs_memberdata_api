@@ -5,11 +5,24 @@ require('dotenv').config();
 class GoogleSheetsService {
     constructor() {
         this.spreadsheetId = process.env.GOOGLE_SHEET_ID;
-        this.credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, 'google-credentials.json');
-        this.auth = new google.auth.GoogleAuth({
-            keyFile: this.credentialsPath,
+        
+        const authConfig = {
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
+        };
+
+        if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+            try {
+                authConfig.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+            } catch (error) {
+                console.error('Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', error);
+            }
+        }
+
+        if (!authConfig.credentials) {
+            authConfig.keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, 'google-credentials.json');
+        }
+
+        this.auth = new google.auth.GoogleAuth(authConfig);
         this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     }
 
