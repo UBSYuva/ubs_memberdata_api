@@ -12,14 +12,31 @@ class GoogleSheetsService {
 
         if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
             try {
-                authConfig.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+                const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+                if (creds.private_key) creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+                authConfig.credentials = creds;
             } catch (error) {
                 console.error('Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', error);
             }
         }
 
-        if (!authConfig.credentials) {
-            authConfig.keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, 'google-credentials.json');
+        const googleAppCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+        if (!authConfig.credentials && googleAppCreds) {
+            if (googleAppCreds.trim().startsWith('{')) {
+                try {
+                    const creds = JSON.parse(googleAppCreds);
+                    if (creds.private_key) creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+                    authConfig.credentials = creds;
+                } catch (error) {
+                    console.error('Error parsing GOOGLE_APPLICATION_CREDENTIALS JSON:', error.message);
+                }
+            } else {
+                authConfig.keyFile = googleAppCreds;
+            }
+        }
+
+        if (!authConfig.credentials && !authConfig.keyFile) {
+            authConfig.keyFile = path.join(__dirname, 'google-credentials.json');
         }
 
         this.auth = new google.auth.GoogleAuth(authConfig);
