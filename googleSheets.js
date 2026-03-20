@@ -10,16 +10,48 @@ class GoogleSheetsService {
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         };
 
-        if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        let serviceAccountJson = (process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
+        if ((serviceAccountJson.startsWith("'") && serviceAccountJson.endsWith("'")) || 
+            (serviceAccountJson.startsWith('"') && serviceAccountJson.endsWith('"'))) {
+            serviceAccountJson = serviceAccountJson.substring(1, serviceAccountJson.length - 1).trim();
+        }
+
+        if (serviceAccountJson) {
             try {
-                authConfig.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+                const creds = JSON.parse(serviceAccountJson);
+                if (creds.private_key) creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+                authConfig.credentials = creds;
             } catch (error) {
-                console.error('Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', error);
+                console.error('Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', error.message);
             }
         }
 
-        if (!authConfig.credentials) {
-            authConfig.keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, 'google-credentials.json');
+        let googleAppCreds = (process.env.GOOGLE_APPLICATION_CREDENTIALS || '').trim();
+        
+        // Strip surrounding quotes if the string is wrapped in them (common in some env setups)
+        if ((googleAppCreds.startsWith("'") && googleAppCreds.endsWith("'")) || 
+            (googleAppCreds.startsWith('"') && googleAppCreds.endsWith('"'))) {
+            googleAppCreds = googleAppCreds.substring(1, googleAppCreds.length - 1).trim();
+        }
+
+        if (!authConfig.credentials && googleAppCreds) {
+            if (googleAppCreds.startsWith('{')) {
+                try {
+                    const creds = JSON.parse(googleAppCreds);
+                    if (creds.private_key) creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+                    authConfig.credentials = creds;
+                } catch (error) {
+                    console.error('Error parsing GOOGLE_APPLICATION_CREDENTIALS JSON:', error.message);
+                    // If it's definitely JSON start but parsing failed, don't fallback to keyFile 
+                    // to avoid ENAMETOOLONG errors.
+                }
+            } else {
+                authConfig.keyFile = googleAppCreds;
+            }
+        }
+
+        if (!authConfig.credentials && !authConfig.keyFile) {
+            authConfig.keyFile = path.join(__dirname, 'google-credentials.json');
         }
 
         this.auth = new google.auth.GoogleAuth(authConfig);
