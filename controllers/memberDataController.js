@@ -1,7 +1,8 @@
 const googleSheets = require('../googleSheets');
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 const ExcelJS = require('exceljs');
 
 // Helper to format Date (consistent with previous implementation)
@@ -535,9 +536,14 @@ exports.createDonation = async (req, res) => {
             .replace("#paymentNo#", !paymentNo ? (paymentTypeStr === "રોકડા" ? "" : "-") : paymentNo)
             .replace("#receiptNo#", maxId);
 
+        const isProduction = process.env.NODE_ENV === 'production';
+
         const browser = await puppeteer.launch({ 
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
         });
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
