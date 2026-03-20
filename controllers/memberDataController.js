@@ -547,7 +547,9 @@ exports.createDonation = async (req, res) => {
         });
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-        await page.setViewport({ width: 800, height: 1100, deviceScaleFactor: 2 });
+        // Small delay to ensure Google Fonts are fully rendered
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await page.setViewport({ width: 800, height: 1000, deviceScaleFactor: 3 });
         
         const imageBuffer = await page.screenshot({
             type: 'jpeg',
