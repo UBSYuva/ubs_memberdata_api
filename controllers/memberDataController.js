@@ -349,6 +349,174 @@ exports.downloadDonationPDF = async (req, res) => {
     }
 };
 
+// Download Member Data (PDF)
+exports.downloadMemberPDF = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
+        const sortedRows = rows.sort((a, b) => (parseInt(a.memberId) || 0) - (parseInt(b.memberId) || 0));
+
+        let rowsHtml = sortedRows.map(row => `
+            <tr>
+                <td>${row.memberId || '-'}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.relation || '-'}</td>
+                <td>${row.city || '-'}</td>
+                <td>${row.mobile || '-'}</td>
+                <td>${row.gender || '-'}</td>
+                <td>${row.marriagestatus || '-'}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h2 { text-align: center; color: #1e293b; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; }
+                    th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fbfcfe; }
+                </style>
+            </head>
+            <body>
+                <h2>UBS Seva Trust - Members Directory</h2>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Memb. ID</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>City</th>
+                            <th>Mobile</th>
+                            <th>Gender</th>
+                            <th>Married</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const isProduction = process.env.NODE_ENV === 'production';
+        const browser = await puppeteer.launch({ 
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true
+        });
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="members_directory.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Download Shubhechhak Data (PDF)
+exports.downloadShubhechhakPDF = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
+        const sortedRows = rows.sort((a, b) => (parseInt(a.memberId) || 0) - (parseInt(b.memberId) || 0));
+
+        let rowsHtml = sortedRows.map(row => `
+            <tr>
+                <td>${row.memberId || '-'}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.relation || '-'}</td>
+                <td>${row.city || '-'}</td>
+                <td>${row.mobile || '-'}</td>
+                <td>${row.gender || '-'}</td>
+                <td>${row.marriagestatus || '-'}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h2 { text-align: center; color: #1e293b; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; }
+                    th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fbfcfe; }
+                </style>
+            </head>
+            <body>
+                <h2>UBS Seva Trust - Shubhechhak Directory</h2>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Memb. ID</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>City</th>
+                            <th>Mobile</th>
+                            <th>Gender</th>
+                            <th>Married</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const isProduction = process.env.NODE_ENV === 'production';
+        const browser = await puppeteer.launch({ 
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true
+        });
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="shubhechhak_directory.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // POST: api/MemberData (Add Member)
 exports.addMember = async (req, res) => {
     try {
@@ -445,12 +613,13 @@ exports.addShubhechhakMember = async (req, res) => {
 // PUT: api/MemberData/:id (Update Member)
 exports.updateMember = async (req, res) => {
     try {
-        const id = req.params.id; // This is the _id
+        const id = req.params.id || value.Id; // This is the _id
         const value = req.body;
 
         const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        const oldMember = rows.find(r => r._id === value.Id);
-        const oldMemberId = oldMember ? oldMember.memberId : null;
+        const oldMember = rows.find(r => r._id === id);
+        if (!oldMember) return res.status(404).json({ message: "Member not found" });
+        const oldMemberId = oldMember.memberId;
 
         const dob = formatDate(value.DateOfBirth);
         const updatedData = {
@@ -471,7 +640,7 @@ exports.updateMember = async (req, res) => {
             gender: value.Gender
         };
 
-        await googleSheets.updateRow(SHEETS.MEMBERS, '_id', value.Id, updatedData);
+        await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
 
         const newMemberId = value.MemberId.toString();
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
@@ -500,12 +669,13 @@ exports.updateMember = async (req, res) => {
 // PUT: api/MemberData/shubhechhak/:id
 exports.updateShubhechhakMember = async (req, res) => {
     try {
-        const id = req.params.id;
+        const id = req.params.id || value.Id;
         const value = req.body;
 
         const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
-        const oldMember = rows.find(r => r._id === value.Id);
-        const oldMemberId = oldMember ? oldMember.memberId : null;
+        const oldMember = rows.find(r => r._id === id);
+        if (!oldMember) return res.status(404).json({ message: "Shubhechhak not found" });
+        const oldMemberId = oldMember.memberId;
 
         const dob = formatDate(value.DateOfBirth);
         const updatedData = {
@@ -526,7 +696,7 @@ exports.updateShubhechhakMember = async (req, res) => {
             gender: value.Gender
         };
 
-        await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', value.Id, updatedData);
+        await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
 
         const newMemberId = value.MemberId.toString();
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
