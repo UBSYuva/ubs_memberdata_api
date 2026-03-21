@@ -176,18 +176,39 @@ exports.getTotalDonation = async (req, res) => {
         const aggregation = {};
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        rows.forEach(row => {
-            const date = new Date(row.paymentDate);
-            if (isNaN(date.getTime())) return;
-            const year = date.getFullYear();
-            const month = date.getMonth(); // 0-11
-            const key = `${year}-${month.toString().padStart(2, '0')}`;
+        const { filter, date: dateParam } = req.query;
+        let filteredRows = [...rows];
+
+        if (filter === 'today') {
+            const today = dateParam ? new Date(dateParam) : new Date();
+            filteredRows = rows.filter(row => {
+                const date = new Date(row.paymentDate);
+                return !isNaN(date.getTime()) &&
+                    date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
+            });
+        }
+
+        filteredRows.forEach(row => {
+            const dateObj = new Date(row.paymentDate);
+            if (isNaN(dateObj.getTime())) return;
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth();
+            const dateStr = dateObj.getDate();
+            
+            // For 'today' filter, we want a daily summary. For normal, we want monthly.
+            const key = (filter === 'today') 
+                ? `${year}-${month}-${dateStr}` 
+                : `${year}-${month.toString().padStart(2, '0')}`;
+            
             const amount = parseFloat(row.amount) || 0;
 
             if (!aggregation[key]) {
                 aggregation[key] = { 
                     year, 
                     month, 
+                    day: dateStr,
                     monthName: monthNames[month],
                     avgDonation: 0, 
                     totalEntries: 0, 
@@ -215,10 +236,19 @@ exports.getTotalDonation = async (req, res) => {
 // Donation List (Filtered by Year & Month)
 exports.getDonationData = async (req, res) => {
     try {
-        const { year, month } = req.query;
+        const { year, month, filter, date: dateParam } = req.query;
         let rows = await googleSheets.getRows(SHEETS.DONATION);
 
-        if (year) {
+        if (filter === 'today') {
+            const today = dateParam ? new Date(dateParam) : new Date();
+            rows = rows.filter(row => {
+                const date = new Date(row.paymentDate);
+                return !isNaN(date.getTime()) &&
+                    date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
+            });
+        } else if (year) {
             rows = rows.filter(row => {
                 const date = new Date(row.paymentDate);
                 if (isNaN(date.getTime())) return false;
