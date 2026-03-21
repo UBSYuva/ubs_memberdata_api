@@ -323,9 +323,13 @@ exports.downloadDonationPDF = async (req, res) => {
             </html>
         `;
 
+        const isProduction = process.env.NODE_ENV === 'production';
         const browser = await puppeteer.launch({ 
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
         });
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
