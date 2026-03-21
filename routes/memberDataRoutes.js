@@ -10,7 +10,9 @@ router.get('/profession', memberDataController.getProfessions);
 router.get('/marriageStatus', memberDataController.getMarriageStatuses);
 router.get('/getTotalDonation', memberDataController.getTotalDonation);
 router.get('/donationData', memberDataController.getDonationData);
+router.get('/appPin', memberDataController.getAppPin);
 router.get('/downloadDonationData', memberDataController.downloadDonationData);
+router.get('/downloadDonationPDF', memberDataController.downloadDonationPDF);
 router.get('/fetchByMemberId/:memberId', memberDataController.getMemberByMemberId);
 
 // 2. Base paths (GET)

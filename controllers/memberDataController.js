@@ -225,6 +225,17 @@ exports.getDonationData = async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
+// GET: api/memberdata/appPin
+exports.getAppPin = async (req, res) => {
+    try {
+        const configRows = await googleSheets.getRows(SHEETS.CONFIG);
+        const pinEntry = configRows.find(c => c.key === 'appPin');
+        res.json({ pin: pinEntry ? pinEntry.value : "1234" }); // Fallback to 1234 if not set in sheet
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Download Donation Data (Excel)
 exports.downloadDonationData = async (req, res) => {
     try {
@@ -255,6 +266,86 @@ exports.downloadDonationData = async (req, res) => {
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// Download Donation Data (PDF)
+exports.downloadDonationPDF = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.DONATION);
+        const sortedRows = rows.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+
+        let rowsHtml = sortedRows.map(row => `
+            <tr>
+                <td>${row.id || '-'}</td>
+                <td>${row.memberId || '-'}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.city || '-'}</td>
+                <td>${row.amount || '0'}</td>
+                <td>${row.paymentType || '-'}</td>
+                <td>${row.paymentDate || '-'}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h2 { text-align: center; color: #4f46e5; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 12px; }
+                    th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fbfcfe; }
+                </style>
+            </head>
+            <body>
+                <h2>UBS Seva Trust - Donation History</h2>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Recp. No</th>
+                            <th>Memb. ID</th>
+                            <th>Donor Name</th>
+                            <th>City</th>
+                            <th>Amount</th>
+                            <th>Payment</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const browser = await puppeteer.launch({ 
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true
+        });
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="donation_report.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
 };
 
 // POST: api/MemberData (Add Member)
