@@ -273,7 +273,11 @@ exports.downloadDonationData = async (req, res) => {
 exports.downloadDonationPDF = async (req, res) => {
     try {
         const rows = await googleSheets.getRows(SHEETS.DONATION);
-        const sortedRows = rows.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+        const sortedRows = rows.sort((a, b) => {
+            const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
+            const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
+            return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+        });
 
         let rowsHtml = sortedRows.map(row => `
             <tr>
