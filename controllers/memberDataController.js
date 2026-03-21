@@ -169,44 +169,67 @@ exports.getMarriageStatuses = async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// Donation Aggregation
+// Donation Aggregation (By Year & Month)
 exports.getTotalDonation = async (req, res) => {
     try {
         const rows = await googleSheets.getRows(SHEETS.DONATION);
         const aggregation = {};
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
         rows.forEach(row => {
             const date = new Date(row.paymentDate);
             if (isNaN(date.getTime())) return;
             const year = date.getFullYear();
+            const month = date.getMonth(); // 0-11
+            const key = `${year}-${month.toString().padStart(2, '0')}`;
             const amount = parseFloat(row.amount) || 0;
 
-            if (!aggregation[year]) {
-                aggregation[year] = { year, avgDonation: 0, totalEntries: 0, totalDonation: 0 };
+            if (!aggregation[key]) {
+                aggregation[key] = { 
+                    year, 
+                    month, 
+                    monthName: monthNames[month],
+                    avgDonation: 0, 
+                    totalEntries: 0, 
+                    totalDonation: 0 
+                };
             }
-            aggregation[year].totalEntries += 1;
-            aggregation[year].totalDonation += amount;
+            aggregation[key].totalEntries += 1;
+            aggregation[key].totalDonation += amount;
         });
 
-        const result = Object.values(aggregation).map(item => ({
-            ...item,
-            avgDonation: item.totalDonation / item.totalEntries
-        }));
+        const result = Object.values(aggregation)
+            .map(item => ({
+                ...item,
+                avgDonation: item.totalDonation / item.totalEntries
+            }))
+            .sort((a, b) => {
+                if (a.year !== b.year) return b.year - a.year;
+                return b.month - a.month;
+            });
 
         res.json(result);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// Donation List
+// Donation List (Filtered by Year & Month)
 exports.getDonationData = async (req, res) => {
     try {
-        const { year } = req.query;
+        const { year, month } = req.query;
         let rows = await googleSheets.getRows(SHEETS.DONATION);
 
         if (year) {
             rows = rows.filter(row => {
                 const date = new Date(row.paymentDate);
-                return !isNaN(date.getTime()) && date.getFullYear().toString() === year;
+                if (isNaN(date.getTime())) return false;
+                
+                const matchesYear = date.getFullYear().toString() === year;
+                if (!matchesYear) return false;
+                
+                if (month !== undefined && month !== null && month !== '') {
+                    return date.getMonth().toString() === month;
+                }
+                return true;
             });
         }
 
