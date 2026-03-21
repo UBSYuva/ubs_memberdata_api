@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sparticuz/chromium": "^143.0.4",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -20,6 +21,6 @@
     "googleapis": "^171.4.0",
     "morgan": "^1.10.1",
     "mysql2": "^3.18.2",
-    "puppeteer": "^24.38.0"
+    "puppeteer-core": "^24.40.0"
   }
 }
