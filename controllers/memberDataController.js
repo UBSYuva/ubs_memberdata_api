@@ -180,44 +180,97 @@ exports.getMarriageStatuses = async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// Donation Aggregation
+// Donation Aggregation (By Year & Month)
 exports.getTotalDonation = async (req, res) => {
     try {
         const rows = await googleSheets.getRows(SHEETS.DONATION);
         const aggregation = {};
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        rows.forEach(row => {
-            const date = new Date(row.paymentDate);
-            if (isNaN(date.getTime())) return;
-            const year = date.getFullYear();
+        const { filter, date: dateParam } = req.query;
+        let filteredRows = [...rows];
+
+        if (filter === 'today') {
+            const today = dateParam ? new Date(dateParam) : new Date();
+            filteredRows = rows.filter(row => {
+                const date = new Date(row.paymentDate);
+                return !isNaN(date.getTime()) &&
+                    date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
+            });
+        }
+
+        filteredRows.forEach(row => {
+            const dateObj = new Date(row.paymentDate);
+            if (isNaN(dateObj.getTime())) return;
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth();
+            const dateStr = dateObj.getDate();
+            
+            // For 'today' filter, we want a daily summary. For normal, we want monthly.
+            const key = (filter === 'today') 
+                ? `${year}-${month}-${dateStr}` 
+                : `${year}-${month.toString().padStart(2, '0')}`;
+            
             const amount = parseFloat(row.amount) || 0;
 
-            if (!aggregation[year]) {
-                aggregation[year] = { year, avgDonation: 0, totalEntries: 0, totalDonation: 0 };
+            if (!aggregation[key]) {
+                aggregation[key] = { 
+                    year, 
+                    month, 
+                    day: dateStr,
+                    monthName: monthNames[month],
+                    avgDonation: 0, 
+                    totalEntries: 0, 
+                    totalDonation: 0 
+                };
             }
-            aggregation[year].totalEntries += 1;
-            aggregation[year].totalDonation += amount;
+            aggregation[key].totalEntries += 1;
+            aggregation[key].totalDonation += amount;
         });
 
-        const result = Object.values(aggregation).map(item => ({
-            ...item,
-            avgDonation: item.totalDonation / item.totalEntries
-        }));
+        const result = Object.values(aggregation)
+            .map(item => ({
+                ...item,
+                avgDonation: item.totalDonation / item.totalEntries
+            }))
+            .sort((a, b) => {
+                if (a.year !== b.year) return b.year - a.year;
+                return b.month - a.month;
+            });
 
         res.json(result);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// Donation List
+// Donation List (Filtered by Year & Month)
 exports.getDonationData = async (req, res) => {
     try {
-        const { year } = req.query;
+        const { year, month, filter, date: dateParam } = req.query;
         let rows = await googleSheets.getRows(SHEETS.DONATION);
 
-        if (year) {
+        if (filter === 'today') {
+            const today = dateParam ? new Date(dateParam) : new Date();
             rows = rows.filter(row => {
                 const date = new Date(row.paymentDate);
-                return !isNaN(date.getTime()) && date.getFullYear().toString() === year;
+                return !isNaN(date.getTime()) &&
+                    date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
+            });
+        } else if (year) {
+            rows = rows.filter(row => {
+                const date = new Date(row.paymentDate);
+                if (isNaN(date.getTime())) return false;
+                
+                const matchesYear = date.getFullYear().toString() === year;
+                if (!matchesYear) return false;
+                
+                if (month !== undefined && month !== null && month !== '') {
+                    return date.getMonth().toString() === month;
+                }
+                return true;
             });
         }
 
@@ -235,6 +288,17 @@ exports.getDonationData = async (req, res) => {
 
         res.json(formattedRows);
     } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// GET: api/memberdata/appPin
+exports.getAppPin = async (req, res) => {
+    try {
+        const configRows = await googleSheets.getRows(SHEETS.CONFIG);
+        const pinEntry = configRows.find(c => c.key === 'appPin');
+        res.json({ pin: pinEntry ? pinEntry.value : "1234" }); // Fallback to 1234 if not set in sheet
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 };
 
 // Download Donation Data (Excel)
@@ -267,6 +331,262 @@ exports.downloadDonationData = async (req, res) => {
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// Download Donation Data (PDF)
+exports.downloadDonationPDF = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.DONATION);
+        const sortedRows = rows.sort((a, b) => {
+            const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
+            const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
+            return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+        });
+
+        let rowsHtml = sortedRows.map(row => `
+            <tr>
+                <td>${row.id || '-'}</td>
+                <td>${row.memberId || '-'}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.city || '-'}</td>
+                <td>${row.amount || '0'}</td>
+                <td>${row.paymentType || '-'}</td>
+                <td>${row.paymentDate || '-'}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h2 { text-align: center; color: #4f46e5; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 12px; }
+                    th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fbfcfe; }
+                </style>
+            </head>
+            <body>
+                <h2>UBS Seva Trust - Donation History</h2>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Recp. No</th>
+                            <th>Memb. ID</th>
+                            <th>Donor Name</th>
+                            <th>City</th>
+                            <th>Amount</th>
+                            <th>Payment</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const isProduction = process.env.NODE_ENV === 'production';
+        const browser = await puppeteer.launch({ 
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true
+        });
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="donation_report.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Download Member Data (PDF)
+exports.downloadMemberPDF = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
+        const sortedRows = rows.sort((a, b) => (parseInt(a.memberId) || 0) - (parseInt(b.memberId) || 0));
+
+        let rowsHtml = sortedRows.map(row => `
+            <tr>
+                <td>${row.memberId || '-'}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.relation || '-'}</td>
+                <td>${row.city || '-'}</td>
+                <td>${row.mobile || '-'}</td>
+                <td>${row.gender || '-'}</td>
+                <td>${row.marriagestatus || '-'}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h2 { text-align: center; color: #1e293b; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; }
+                    th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fbfcfe; }
+                </style>
+            </head>
+            <body>
+                <h2>UBS Seva Trust - Members Directory</h2>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Memb. ID</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>City</th>
+                            <th>Mobile</th>
+                            <th>Gender</th>
+                            <th>Married</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const isProduction = process.env.NODE_ENV === 'production';
+        const browser = await puppeteer.launch({ 
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true
+        });
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="members_directory.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Download Shubhechhak Data (PDF)
+exports.downloadShubhechhakPDF = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
+        const sortedRows = rows.sort((a, b) => (parseInt(a.memberId) || 0) - (parseInt(b.memberId) || 0));
+
+        let rowsHtml = sortedRows.map(row => `
+            <tr>
+                <td>${row.memberId || '-'}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.relation || '-'}</td>
+                <td>${row.city || '-'}</td>
+                <td>${row.mobile || '-'}</td>
+                <td>${row.gender || '-'}</td>
+                <td>${row.marriagestatus || '-'}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h2 { text-align: center; color: #1e293b; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 11px; }
+                    th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fbfcfe; }
+                </style>
+            </head>
+            <body>
+                <h2>UBS Seva Trust - Shubhechhak Directory</h2>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Memb. ID</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>City</th>
+                            <th>Mobile</th>
+                            <th>Gender</th>
+                            <th>Married</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const isProduction = process.env.NODE_ENV === 'production';
+        const browser = await puppeteer.launch({ 
+            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: isProduction ? await chromium.executablePath() : undefined,
+            headless: isProduction ? chromium.headless : 'new',
+            channel: isProduction ? undefined : 'chrome',
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true
+        });
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="shubhechhak_directory.pdf"',
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
 };
 
 // POST: api/MemberData (Add Member)
@@ -365,12 +685,13 @@ exports.addShubhechhakMember = async (req, res) => {
 // PUT: api/MemberData/:id (Update Member)
 exports.updateMember = async (req, res) => {
     try {
-        const id = req.params.id; // This is the _id
+        const id = req.params.id || value.Id; // This is the _id
         const value = req.body;
 
         const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        const oldMember = rows.find(r => r._id === value.Id);
-        const oldMemberId = oldMember ? oldMember.memberId : null;
+        const oldMember = rows.find(r => r._id === id);
+        if (!oldMember) return res.status(404).json({ message: "Member not found" });
+        const oldMemberId = oldMember.memberId;
 
         const dob = formatDate(value.DateOfBirth);
         const updatedData = {
@@ -391,7 +712,7 @@ exports.updateMember = async (req, res) => {
             gender: value.Gender
         };
 
-        await googleSheets.updateRow(SHEETS.MEMBERS, '_id', value.Id, updatedData);
+        await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
 
         const newMemberId = value.MemberId.toString();
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
@@ -420,12 +741,13 @@ exports.updateMember = async (req, res) => {
 // PUT: api/MemberData/shubhechhak/:id
 exports.updateShubhechhakMember = async (req, res) => {
     try {
-        const id = req.params.id;
+        const id = req.params.id || value.Id;
         const value = req.body;
 
         const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
-        const oldMember = rows.find(r => r._id === value.Id);
-        const oldMemberId = oldMember ? oldMember.memberId : null;
+        const oldMember = rows.find(r => r._id === id);
+        if (!oldMember) return res.status(404).json({ message: "Shubhechhak not found" });
+        const oldMemberId = oldMember.memberId;
 
         const dob = formatDate(value.DateOfBirth);
         const updatedData = {
@@ -446,7 +768,7 @@ exports.updateShubhechhakMember = async (req, res) => {
             gender: value.Gender
         };
 
-        await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', value.Id, updatedData);
+        await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
 
         const newMemberId = value.MemberId.toString();
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {

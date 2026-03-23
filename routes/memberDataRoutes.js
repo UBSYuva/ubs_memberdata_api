@@ -10,7 +10,11 @@ router.get('/profession', memberDataController.getProfessions);
 router.get('/marriageStatus', memberDataController.getMarriageStatuses);
 router.get('/getTotalDonation', memberDataController.getTotalDonation);
 router.get('/donationData', memberDataController.getDonationData);
+router.get('/appPin', memberDataController.getAppPin);
 router.get('/downloadDonationData', memberDataController.downloadDonationData);
+router.get('/downloadDonationPDF', memberDataController.downloadDonationPDF);
+router.get('/downloadMemberPDF', memberDataController.downloadMemberPDF);
+router.get('/downloadShubhechhakPDF', memberDataController.downloadShubhechhakPDF);
 router.get('/fetchByMemberId/:memberId', memberDataController.getMemberByMemberId);
 router.get('/appPin', memberDataController.getAppPin);
 
