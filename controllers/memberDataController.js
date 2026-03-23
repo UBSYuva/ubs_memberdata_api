@@ -113,6 +113,17 @@ exports.getMemberByMemberId = async (req, res) => {
     }
 };
 
+// GET: api/memberdata/appPin
+exports.getAppPin = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.CONFIG);
+        const pinValue = rows.find(r => r.key === 'appPin')?.value;
+        res.json({ appPin: pinValue || '' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // GET: api/MemberData/shubhechhak
 exports.getShubhechhakMembers = async (req, res) => {
     try {

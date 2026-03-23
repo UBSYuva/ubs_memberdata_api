@@ -12,6 +12,7 @@ router.get('/getTotalDonation', memberDataController.getTotalDonation);
 router.get('/donationData', memberDataController.getDonationData);
 router.get('/downloadDonationData', memberDataController.downloadDonationData);
 router.get('/fetchByMemberId/:memberId', memberDataController.getMemberByMemberId);
+router.get('/appPin', memberDataController.getAppPin);
 
 // 2. Base paths (GET)
 router.get('/', memberDataController.getAllMembers);

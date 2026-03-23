@@ -20,14 +20,25 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost') || origin.startsWith('https://localhost')) {
+        // Allow requests with no origin (like mobile apps, curl, or same-origin)
+        if (!origin) return callback(null, true);
+        
+        const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
+                          origin.startsWith('http://localhost') || 
+                          origin.startsWith('https://localhost') ||
+                          origin.startsWith('http://127.0.0.1');
+                          
+        if (isAllowed) {
             callback(null, true);
         } else {
+            console.log('Origin not allowed by CORS:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 
 app.use(morgan('dev'));
