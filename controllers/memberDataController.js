@@ -113,16 +113,6 @@ exports.getMemberByMemberId = async (req, res) => {
     }
 };
 
-// GET: api/memberdata/appPin
-exports.getAppPin = async (req, res) => {
-    try {
-        const rows = await googleSheets.getRows(SHEETS.CONFIG);
-        const pinValue = rows.find(r => r.key === 'appPin')?.value;
-        res.json({ appPin: pinValue || '' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
 
 // GET: api/MemberData/shubhechhak
 exports.getShubhechhakMembers = async (req, res) => {
@@ -294,8 +284,33 @@ exports.getDonationData = async (req, res) => {
 exports.getAppPin = async (req, res) => {
     try {
         const configRows = await googleSheets.getRows(SHEETS.CONFIG);
-        const pinEntry = configRows.find(c => c.key === 'appPin');
-        res.json({ pin: pinEntry ? pinEntry.value : "1234" }); // Fallback to 1234 if not set in sheet
+        
+        // Fetch specific pins for each role
+        let adminPin = configRows.find(c => c.key === 'adminPin')?.value;
+        let viewMembersPin = configRows.find(c => c.key === 'viewMembersPin')?.value;
+        let donationInvoicePin = configRows.find(c => c.key === 'donationInvoicePin')?.value;
+        const legacyPin = configRows.find(c => c.key === 'appPin')?.value;
+
+        // Proactively create missing pins in googlesheet if they don't exist
+        if (!adminPin) {
+            adminPin = legacyPin || '2026';
+            await googleSheets.addRow(SHEETS.CONFIG, { key: 'adminPin', value: adminPin });
+        }
+        if (!viewMembersPin) {
+            viewMembersPin = '1111';
+            await googleSheets.addRow(SHEETS.CONFIG, { key: 'viewMembersPin', value: viewMembersPin });
+        }
+        if (!donationInvoicePin) {
+            donationInvoicePin = '2222';
+            await googleSheets.addRow(SHEETS.CONFIG, { key: 'donationInvoicePin', value: donationInvoicePin });
+        }
+
+        res.json({ 
+            admin: adminPin,
+            viewMembers: viewMembersPin,
+            donationInvoice: donationInvoicePin,
+            pin: legacyPin || adminPin // Backward compatibility
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
