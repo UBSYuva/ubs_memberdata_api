@@ -698,29 +698,38 @@ exports.updateMember = async (req, res) => {
         const oldMember = rows.find(r => r._id === id);
         if (!oldMember) return res.status(404).json({ message: "Member not found" });
         const oldMemberId = oldMember.memberId;
+        const newMemberIdRaw = value.MemberId || value['Member Id'] || value.memberId;
+        const newMemberId = (newMemberIdRaw !== undefined && newMemberIdRaw !== null && newMemberIdRaw !== '') ? newMemberIdRaw.toString() : oldMemberId;
+
+        // Uniqueness check for family ID
+        if (newMemberId !== oldMemberId) {
+            const familyExists = rows.find(r => r.memberId === newMemberId && r.relation === 'Self' && r._id !== id);
+            if (familyExists) {
+                return res.status(400).json({ message: `Member ID ${newMemberId} is already assigned to another family (${familyExists.name})` });
+            }
+        }
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
         const updatedData = {
             _id: id,
-            memberId: (value.MemberId || value['Member Id'] || value.memberId).toString(),
-            name: value.Name || value.name,
-            relation: value.Relation || value.relation,
-            dob: dob,
-            dateOfBirth: dob,
-            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus,
-            profession: value.Profession || value.profession,
-            designation: value.Designation || value.designation,
-            address: value.Address || value.address,
-            companyName: value.Company || value.CompanyName || value.companyName || value.company,
-            mobile: value.Mobile || value.mobile,
-            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
-            city: value.City || value.city,
-            gender: value.Gender || value.gender
+            memberId: newMemberId,
+            name: value.Name || value.name || oldMember.name,
+            relation: value.Relation || value.relation || oldMember.relation,
+            dob: dob || oldMember.dob,
+            dateOfBirth: dob || oldMember.dateOfBirth,
+            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus || oldMember.marriagestatus,
+            profession: value.Profession || value.profession || oldMember.profession,
+            designation: value.Designation || value.designation || oldMember.designation,
+            address: value.Address || value.address || oldMember.address,
+            companyName: value.Company || value.CompanyName || value.companyName || value.company || oldMember.companyName,
+            mobile: value.Mobile || value.mobile || oldMember.mobile,
+            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup || oldMember.bloodGroup,
+            city: value.City || value.city || oldMember.city,
+            gender: value.Gender || value.gender || oldMember.gender
         };
 
         await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
 
-        const newMemberId = updatedData.memberId;
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
             for (const row of rows) {
                 if (row.memberId === oldMemberId && row._id !== id) {
@@ -750,29 +759,38 @@ exports.updateShubhechhakMember = async (req, res) => {
         const oldMember = rows.find(r => r._id === id);
         if (!oldMember) return res.status(404).json({ message: "Shubhechhak not found" });
         const oldMemberId = oldMember.memberId;
+        const newMemberIdRaw = value.MemberId || value['Member Id'] || value.memberId;
+        const newMemberId = (newMemberIdRaw !== undefined && newMemberIdRaw !== null && newMemberIdRaw !== '') ? newMemberIdRaw.toString() : oldMemberId;
+
+        // Uniqueness check for shubhechhak ID
+        if (newMemberId !== oldMemberId) {
+            const familyExists = rows.find(r => r.memberId === newMemberId && r._id !== id);
+            if (familyExists) {
+                return res.status(400).json({ message: `Shubhechhak ID ${newMemberId} is already assigned to ${familyExists.name}` });
+            }
+        }
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
         const updatedData = {
             _id: id,
-            memberId: (value.MemberId || value['Member Id'] || value.memberId).toString(),
-            name: value.Name || value.name,
-            relation: value.Relation || value.relation,
-            dob: dob,
-            dateOfBirth: dob,
-            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus,
-            profession: value.Profession || value.profession,
-            designation: value.Designation || value.designation,
-            address: value.Address || value.address,
-            companyName: value.Company || value.CompanyName || value.companyName || value.company,
-            mobile: value.Mobile || value.mobile,
-            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
-            city: value.City || value.city,
-            gender: value.Gender || value.gender
+            memberId: newMemberId,
+            name: value.Name || value.name || oldMember.name,
+            relation: value.Relation || value.relation || oldMember.relation,
+            dob: dob || oldMember.dob,
+            dateOfBirth: dob || oldMember.dateOfBirth,
+            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus || oldMember.marriagestatus,
+            profession: value.Profession || value.profession || oldMember.profession,
+            designation: value.Designation || value.designation || oldMember.designation,
+            address: value.Address || value.address || oldMember.address,
+            companyName: value.Company || value.CompanyName || value.companyName || value.company || oldMember.companyName,
+            mobile: value.Mobile || value.mobile || oldMember.mobile,
+            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup || oldMember.bloodGroup,
+            city: value.City || value.city || oldMember.city,
+            gender: value.Gender || value.gender || oldMember.gender
         };
 
         await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
 
-        const newMemberId = updatedData.memberId;
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
             for (const row of rows) {
                 if (row.memberId === oldMemberId && row._id !== id) {
