@@ -610,7 +610,8 @@ exports.addMember = async (req, res) => {
         const value = req.body;
         const rows = await googleSheets.getRows(SHEETS.MEMBERS);
         
-        let newMemberId = value.MemberId;
+        const memberId = value.MemberId || value['Member Id'] || value.memberId;
+        let newMemberId = memberId;
         let isNew = false;
 
         if (!newMemberId) {
@@ -619,35 +620,29 @@ exports.addMember = async (req, res) => {
             isNew = true;
         }
 
-        const dob = formatDate(value.DateOfBirth);
-        // Generate a simple _id if not provided (Sheets doesn't auto-increment)
-        const _id = Date.now().toString();
+        const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
+        const _id = value.Id || value.id || Date.now().toString();
 
         const newRow = {
             _id: _id,
             memberId: newMemberId.toString(),
-            name: value.Name,
-            relation: value.Relation,
+            name: value.Name || value.name,
+            relation: value.Relation || value.relation,
             dob: dob,
             dateOfBirth: dob,
-            marriagestatus: value.MarriageStatus,
-            profession: value.Profession,
-            designation: value.Designation,
-            address: value.Address,
-            companyName: value.Company,
-            mobile: value.Mobile,
-            bloodGroup: value.BloodGroup,
-            gender: value.Gender,
-            city: value.City
+            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus,
+            profession: value.Profession || value.profession,
+            designation: value.Designation || value.designation,
+            address: value.Address || value.address,
+            companyName: value.Company || value.CompanyName || value.companyName || value.company,
+            mobile: value.Mobile || value.mobile,
+            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
+            gender: value.Gender || value.gender,
+            city: value.City || value.city
         };
 
         await googleSheets.addRow(SHEETS.MEMBERS, newRow);
-
-        if (isNew) {
-            res.json({ message: `Record added successfully! Your New member id is ${newMemberId}` });
-        } else {
-            res.json({ message: "Record added successfully!" });
-        }
+        res.json({ message: isNew ? `Record added successfully! Your New member id is ${newMemberId}` : "Record added successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
@@ -657,7 +652,8 @@ exports.addShubhechhakMember = async (req, res) => {
         const value = req.body;
         const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
         
-        let newMemberId = value.MemberId;
+        const memberId = value.MemberId || value['Member Id'] || value.memberId;
+        let newMemberId = memberId;
         let isNew = false;
 
         if (!newMemberId) {
@@ -666,77 +662,68 @@ exports.addShubhechhakMember = async (req, res) => {
             isNew = true;
         }
 
-        const dob = formatDate(value.DateOfBirth);
-        const _id = Date.now().toString();
+        const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
+        const _id = value.Id || value.id || Date.now().toString();
 
         const newRow = {
             _id: _id,
             memberId: newMemberId.toString(),
-            name: value.Name,
-            relation: value.Relation,
+            name: value.Name || value.name,
+            relation: value.Relation || value.relation,
             dob: dob,
             dateOfBirth: dob,
-            marriagestatus: value.MarriageStatus,
-            profession: value.Profession,
-            designation: value.Designation,
-            address: value.Address,
-            companyName: value.Company,
-            mobile: value.Mobile,
-            bloodGroup: value.BloodGroup,
-            gender: value.Gender,
-            city: value.City
+            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus,
+            profession: value.Profession || value.profession,
+            designation: value.Designation || value.designation,
+            address: value.Address || value.address,
+            companyName: value.Company || value.CompanyName || value.companyName || value.company,
+            mobile: value.Mobile || value.mobile,
+            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
+            gender: value.Gender || value.gender,
+            city: value.City || value.city
         };
 
         await googleSheets.addRow(SHEETS.SHUBHECHHAK, newRow);
-
-        if (isNew) {
-            res.json({ message: `Record added successfully! Your New member id is ${newMemberId}` });
-        } else {
-            res.json({ message: "Record added successfully!" });
-        }
+        res.json({ message: isNew ? `Record added successfully! Your New member id is ${newMemberId}` : "Record added successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 // PUT: api/MemberData/:id (Update Member)
 exports.updateMember = async (req, res) => {
     try {
-        const id = req.params.id || value.Id; // This is the _id
         const value = req.body;
+        const id = req.params.id || value.Id || value.id; 
 
         const rows = await googleSheets.getRows(SHEETS.MEMBERS);
         const oldMember = rows.find(r => r._id === id);
         if (!oldMember) return res.status(404).json({ message: "Member not found" });
         const oldMemberId = oldMember.memberId;
 
-        const dob = formatDate(value.DateOfBirth);
+        const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
         const updatedData = {
-            _id: value.Id,
-            memberId: value.MemberId.toString(),
-            name: value.Name,
-            relation: value.Relation,
+            _id: id,
+            memberId: (value.MemberId || value['Member Id'] || value.memberId).toString(),
+            name: value.Name || value.name,
+            relation: value.Relation || value.relation,
             dob: dob,
             dateOfBirth: dob,
-            marriagestatus: value.MarriageStatus,
-            profession: value.Profession,
-            designation: value.Designation,
-            address: value.Address,
-            companyName: value.Company,
-            mobile: value.Mobile,
-            bloodGroup: value.BloodGroup,
-            city: value.City,
-            gender: value.Gender
+            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus,
+            profession: value.Profession || value.profession,
+            designation: value.Designation || value.designation,
+            address: value.Address || value.address,
+            companyName: value.Company || value.CompanyName || value.companyName || value.company,
+            mobile: value.Mobile || value.mobile,
+            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
+            city: value.City || value.city,
+            gender: value.Gender || value.gender
         };
 
         await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
 
-        const newMemberId = value.MemberId.toString();
+        const newMemberId = updatedData.memberId;
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
-            // Update other family members and donations with same memberId
-            // In Google Sheets, we have to do this Row by Row or via BatchUpdate
-            // For simplicity, let's update them if needed next time they are fetched, 
-            // OR iterate and update now.
             for (const row of rows) {
-                if (row.memberId === oldMemberId && row._id !== value.Id) {
+                if (row.memberId === oldMemberId && row._id !== id) {
                     await googleSheets.updateRow(SHEETS.MEMBERS, '_id', row._id, { ...row, memberId: newMemberId });
                 }
             }
@@ -756,39 +743,39 @@ exports.updateMember = async (req, res) => {
 // PUT: api/MemberData/shubhechhak/:id
 exports.updateShubhechhakMember = async (req, res) => {
     try {
-        const id = req.params.id || value.Id;
         const value = req.body;
+        const id = req.params.id || value.Id || value.id;
 
         const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
         const oldMember = rows.find(r => r._id === id);
         if (!oldMember) return res.status(404).json({ message: "Shubhechhak not found" });
         const oldMemberId = oldMember.memberId;
 
-        const dob = formatDate(value.DateOfBirth);
+        const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
         const updatedData = {
-            _id: value.Id,
-            memberId: value.MemberId.toString(),
-            name: value.Name,
-            relation: value.Relation,
+            _id: id,
+            memberId: (value.MemberId || value['Member Id'] || value.memberId).toString(),
+            name: value.Name || value.name,
+            relation: value.Relation || value.relation,
             dob: dob,
             dateOfBirth: dob,
-            marriagestatus: value.MarriageStatus,
-            profession: value.Profession,
-            designation: value.Designation,
-            address: value.Address,
-            companyName: value.Company,
-            mobile: value.Mobile,
-            bloodGroup: value.BloodGroup,
-            city: value.City,
-            gender: value.Gender
+            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus,
+            profession: value.Profession || value.profession,
+            designation: value.Designation || value.designation,
+            address: value.Address || value.address,
+            companyName: value.Company || value.CompanyName || value.companyName || value.company,
+            mobile: value.Mobile || value.mobile,
+            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
+            city: value.City || value.city,
+            gender: value.Gender || value.gender
         };
 
         await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
 
-        const newMemberId = value.MemberId.toString();
+        const newMemberId = updatedData.memberId;
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
             for (const row of rows) {
-                if (row.memberId === oldMemberId && row._id !== value.Id) {
+                if (row.memberId === oldMemberId && row._id !== id) {
                     await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', row._id, { ...row, memberId: newMemberId });
                 }
             }
