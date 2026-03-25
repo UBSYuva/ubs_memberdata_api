@@ -85,6 +85,7 @@ exports.getMemberById = async (req, res) => {
             "Profession": member.profession,
             "Designation": member.designation,
             "Company": member.companyName,
+            "Company Address": member.companyAddress,
             "Mobile": member.mobile,
             "Gender": member.gender
         };
@@ -166,7 +167,19 @@ exports.getProfessions = async (req, res) => {
 exports.getMarriageStatuses = async (req, res) => {
     try {
         const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        res.json(getUniqueValues(rows, 'marriagestatus'));
+        const uniqueValues = getUniqueValues(rows, 'marriagestatus');
+        const defaults = ['Married', 'Unmarried', 'Widow', 'Widower', 'Divorced'].map(v => ({ marriagestatus: v }));
+        
+        // Merge defaults with unique values from sheet, ensuring uniqueness
+        const existingValues = uniqueValues.map(v => v.marriagestatus);
+        const result = [...uniqueValues];
+        defaults.forEach(d => {
+            if (!existingValues.includes(d.marriagestatus)) {
+                result.push(d);
+            }
+        });
+        
+        res.json(result);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
@@ -635,6 +648,7 @@ exports.addMember = async (req, res) => {
             designation: value.Designation || value.designation,
             address: value.Address || value.address,
             companyName: value.Company || value.CompanyName || value.companyName || value.company,
+            companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'],
             mobile: value.Mobile || value.mobile,
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
             gender: value.Gender || value.gender,
@@ -677,6 +691,7 @@ exports.addShubhechhakMember = async (req, res) => {
             designation: value.Designation || value.designation,
             address: value.Address || value.address,
             companyName: value.Company || value.CompanyName || value.companyName || value.company,
+            companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'],
             mobile: value.Mobile || value.mobile,
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
             gender: value.Gender || value.gender,
@@ -722,6 +737,7 @@ exports.updateMember = async (req, res) => {
             designation: value.Designation || value.designation || oldMember.designation,
             address: value.Address || value.address || oldMember.address,
             companyName: value.Company || value.CompanyName || value.companyName || value.company || oldMember.companyName,
+            companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'] || oldMember.companyAddress,
             mobile: value.Mobile || value.mobile || oldMember.mobile,
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup || oldMember.bloodGroup,
             city: value.City || value.city || oldMember.city,
@@ -783,6 +799,7 @@ exports.updateShubhechhakMember = async (req, res) => {
             designation: value.Designation || value.designation || oldMember.designation,
             address: value.Address || value.address || oldMember.address,
             companyName: value.Company || value.CompanyName || value.companyName || value.company || oldMember.companyName,
+            companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'] || oldMember.companyAddress,
             mobile: value.Mobile || value.mobile || oldMember.mobile,
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup || oldMember.bloodGroup,
             city: value.City || value.city || oldMember.city,

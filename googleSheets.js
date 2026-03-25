@@ -82,22 +82,26 @@ class GoogleSheetsService {
     }
 
     async addRow(sheetName, data) {
+        return this.addRows(sheetName, [data]);
+    }
+
+    async addRows(sheetName, dataArray) {
         try {
             const headersResponse = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
                 range: `${sheetName}!1:1`,
             });
             const headers = headersResponse.data.values[0];
-            const values = headers.map(header => data[header] || '');
+            const rowsToAppend = dataArray.map(data => headers.map(header => data[header] ?? ''));
 
             await this.sheets.spreadsheets.values.append({
                 spreadsheetId: this.spreadsheetId,
                 range: `${sheetName}!A:A`,
                 valueInputOption: 'USER_ENTERED',
-                resource: { values: [values] },
+                resource: { values: rowsToAppend },
             });
         } catch (error) {
-            console.error(`Error adding row to ${sheetName}:`, error);
+            console.error(`Error adding rows to ${sheetName}:`, error);
             throw error;
         }
     }
