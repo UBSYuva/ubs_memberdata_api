@@ -69,7 +69,8 @@ exports.getAllMembers = async (req, res) => {
             "Relation": row.relation,
             "Married": row.marriagestatus,
             "Profession": row.profession,
-            "Mobile": row.mobile
+            "Mobile": row.mobile,
+            "City": row.city
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
         res.json(formattedRows);
@@ -82,16 +83,30 @@ exports.getAllMembers = async (req, res) => {
 exports.getMemberById = async (req, res) => {
     try {
         const id = req.params.id;
-        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        const member = rows.find(r => r._id === id);
+        const [memberRows, shubhechhakRows] = await Promise.all([
+            googleSheets.getRows(SHEETS.MEMBERS),
+            googleSheets.getRows(SHEETS.SHUBHECHHAK)
+        ]);
+
+        let member = memberRows.find(r => r._id === id);
+        let isShubhechhak = false;
+        
+        if (!member) {
+            member = shubhechhakRows.find(r => r._id === id);
+            isShubhechhak = true;
+        }
         
         if (!member) return res.status(404).json({ message: "Not found" });
 
         // Lead calculation (Self member with same memberId)
-        const leadMember = rows.find(r => r.memberId === member.memberId && r.relation === 'Self');
+        let leadName = '';
+        if (!isShubhechhak) {
+            const leadMember = memberRows.find(r => r.memberId === member.memberId && r.relation === 'Self');
+            leadName = leadMember ? leadMember.name : '';
+        }
 
         const result = {
-            "Lead": leadMember ? leadMember.name : '',
+            "Lead": leadName,
             "Address": member.address,
             "Id": member._id,
             "Member Id": member.memberId,
@@ -109,7 +124,7 @@ exports.getMemberById = async (req, res) => {
             "Mobile": member.mobile,
             "Gender": member.gender
         };
-        res.json(result);
+        res.json({ "Table": [result] });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -154,7 +169,8 @@ exports.getShubhechhakMembers = async (req, res) => {
             "Relation": row.relation,
             "Married": row.marriagestatus,
             "Profession": row.profession,
-            "Mobile": row.mobile
+            "Mobile": row.mobile,
+            "City": row.city
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
         res.json(formattedRows);
