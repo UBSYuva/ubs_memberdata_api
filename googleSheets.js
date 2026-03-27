@@ -58,10 +58,34 @@ class GoogleSheetsService {
     }
 
     _clearCache(sheetName) {
-        if (sheetName) {
-            delete this.cache[sheetName];
-        } else {
+        if (!sheetName) {
             this.cache = {};
+        } else {
+            delete this.cache[sheetName];
+        }
+    }
+
+    async ensureHeaders(sheetName, keys) {
+        try {
+            const headersResponse = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: this.spreadsheetId,
+                range: `${sheetName}!1:1`,
+            });
+            let headers = headersResponse.data.values ? headersResponse.data.values[0] : [];
+            const missing = keys.filter(k => k && !headers.includes(k));
+            
+            if (missing.length > 0) {
+                headers = [...headers, ...missing];
+                await this.sheets.spreadsheets.values.update({
+                    spreadsheetId: this.spreadsheetId,
+                    range: `${sheetName}!1:1`,
+                    valueInputOption: 'USER_ENTERED',
+                    resource: { values: [headers] },
+                });
+                this._clearCache(sheetName);
+            }
+        } catch (error) {
+            console.error(`Error ensuring headers in ${sheetName}:`, error);
         }
     }
 

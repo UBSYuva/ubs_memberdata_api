@@ -69,7 +69,12 @@ exports.getAllMembers = async (req, res) => {
             "Relation": row.relation,
             "Married": row.marriagestatus,
             "Profession": row.profession,
+            "Designation": row.designation,
+            "Address": row.address,
+            "Company": row.companyName,
+            "Company Address": row.companyAddress,
             "Mobile": row.mobile,
+            "Blood Group": row.bloodGroup,
             "City": row.city
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
@@ -169,7 +174,12 @@ exports.getShubhechhakMembers = async (req, res) => {
             "Relation": row.relation,
             "Married": row.marriagestatus,
             "Profession": row.profession,
+            "Designation": row.designation,
+            "Address": row.address,
+            "Company": row.companyName,
+            "Company Address": row.companyAddress,
             "Mobile": row.mobile,
+            "Blood Group": row.bloodGroup,
             "City": row.city
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
@@ -651,6 +661,10 @@ exports.addMember = async (req, res) => {
             isNew = true;
         }
 
+        // Ensure headers exist
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        await googleSheets.ensureHeaders(SHEETS.MEMBERS, requiredKeys);
+
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
         const _id = value.Id || value.id || Date.now().toString();
 
@@ -703,6 +717,10 @@ exports.addShubhechhakMember = async (req, res) => {
             newMemberId = maxId + 1;
             isNew = true;
         }
+
+        // Ensure headers exist
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        await googleSheets.ensureHeaders(SHEETS.SHUBHECHHAK, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
         const _id = value.Id || value.id || Date.now().toString();
@@ -762,24 +780,28 @@ exports.updateMember = async (req, res) => {
             }
         }
 
-        const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
+        // Ensure headers exist
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        await googleSheets.ensureHeaders(SHEETS.MEMBERS, requiredKeys);
+
+        const dob = formatDate(value.DateOfBirth ?? value.dob ?? value['Date Of Birth']);
         const updatedData = {
             _id: id,
             memberId: newMemberId,
-            name: value.Name || value.name || oldMember.name,
-            relation: value.Relation || value.relation || oldMember.relation,
-            dob: dob || oldMember.dob,
-            dateOfBirth: dob || oldMember.dateOfBirth,
-            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus || oldMember.marriagestatus,
-            profession: value.Profession || value.profession || oldMember.profession,
-            designation: value.Designation || value.designation || oldMember.designation,
-            address: value.Address || value.address || oldMember.address,
-            companyName: value.Company || value.CompanyName || value.companyName || value.company || oldMember.companyName,
-            companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'] || oldMember.companyAddress,
-            mobile: value.Mobile || value.mobile || oldMember.mobile,
-            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup || oldMember.bloodGroup,
-            city: value.City || value.city || oldMember.city,
-            gender: value.Gender || value.gender || oldMember.gender
+            name: value.Name ?? value.name ?? oldMember.name,
+            relation: value.Relation ?? value.relation ?? oldMember.relation,
+            dob: dob ?? oldMember.dob,
+            dateOfBirth: dob ?? oldMember.dateOfBirth,
+            marriagestatus: value.Married ?? value.MarriageStatus ?? value.marriageStatus ?? oldMember.marriagestatus,
+            profession: value.Profession ?? value.profession ?? oldMember.profession,
+            designation: value.Designation ?? value.designation ?? oldMember.designation,
+            address: value.Address ?? value.address ?? oldMember.address,
+            companyName: value.Company ?? value.CompanyName ?? value.companyName ?? value.company ?? oldMember.companyName,
+            companyAddress: value.CompanyAddress ?? value.companyAddress ?? value['Company Address'] ?? oldMember.companyAddress,
+            mobile: value.Mobile ?? value.mobile ?? oldMember.mobile,
+            bloodGroup: value.BloodGroup ?? value['Blood Group'] ?? value.bloodGroup ?? oldMember.bloodGroup,
+            city: value.City ?? value.city ?? oldMember.city,
+            gender: value.Gender ?? value.gender ?? oldMember.gender
         };
 
         await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
@@ -834,24 +856,28 @@ exports.updateShubhechhakMember = async (req, res) => {
             }
         }
 
-        const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
+        // Ensure headers exist
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        await googleSheets.ensureHeaders(SHEETS.SHUBHECHHAK, requiredKeys);
+
+        const dob = formatDate(value.DateOfBirth ?? value.dob ?? value['Date Of Birth']);
         const updatedData = {
             _id: id,
             memberId: newMemberId,
-            name: value.Name || value.name || oldMember.name,
-            relation: value.Relation || value.relation || oldMember.relation,
-            dob: dob || oldMember.dob,
-            dateOfBirth: dob || oldMember.dateOfBirth,
-            marriagestatus: value.Married || value.MarriageStatus || value.marriageStatus || oldMember.marriagestatus,
-            profession: value.Profession || value.profession || oldMember.profession,
-            designation: value.Designation || value.designation || oldMember.designation,
-            address: value.Address || value.address || oldMember.address,
-            companyName: value.Company || value.CompanyName || value.companyName || value.company || oldMember.companyName,
-            companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'] || oldMember.companyAddress,
-            mobile: value.Mobile || value.mobile || oldMember.mobile,
-            bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup || oldMember.bloodGroup,
-            city: value.City || value.city || oldMember.city,
-            gender: value.Gender || value.gender || oldMember.gender
+            name: value.Name ?? value.name ?? oldMember.name,
+            relation: value.Relation ?? value.relation ?? oldMember.relation,
+            dob: dob ?? oldMember.dob,
+            dateOfBirth: dob ?? oldMember.dateOfBirth,
+            marriagestatus: value.Married ?? value.MarriageStatus ?? value.marriageStatus ?? oldMember.marriagestatus,
+            profession: value.Profession ?? value.profession ?? oldMember.profession,
+            designation: value.Designation ?? value.designation ?? oldMember.designation,
+            address: value.Address ?? value.address ?? oldMember.address,
+            companyName: value.Company ?? value.CompanyName ?? value.companyName ?? value.company ?? oldMember.companyName,
+            companyAddress: value.CompanyAddress ?? value.companyAddress ?? value['Company Address'] ?? oldMember.companyAddress,
+            mobile: value.Mobile ?? value.mobile ?? oldMember.mobile,
+            bloodGroup: value.BloodGroup ?? value['Blood Group'] ?? value.bloodGroup ?? oldMember.bloodGroup,
+            city: value.City ?? value.city ?? oldMember.city,
+            gender: value.Gender ?? value.gender ?? oldMember.gender
         };
 
         await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
