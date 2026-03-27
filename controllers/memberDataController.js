@@ -27,7 +27,12 @@ const SHEETS = {
     MEMBERS: 'mst_member',
     SHUBHECHHAK: 'mst_subhechhak',
     DONATION: 'donation',
-    CONFIG: 'configuration'
+    CONFIG: 'configuration',
+    RELATION: 'mst_relation',
+    MARRIAGE_STATUS: 'mst_marriagestatus',
+    CITY: 'mst_city',
+    PROFESSION: 'mst_profession',
+    BLOODGROUP: 'mst_bloodgroup'
 };
 
 // GET: api/MemberData
@@ -147,41 +152,43 @@ exports.getShubhechhakMembers = async (req, res) => {
 // Master Data Endpoints
 exports.getBloodGroups = async (req, res) => {
     try {
-        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        res.json(getUniqueValues(rows, 'bloodGroup'));
+        const rows = await googleSheets.getRows(SHEETS.BLOODGROUP);
+        res.json(rows.length > 0 ? rows : []);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 exports.getRelations = async (req, res) => {
     try {
-        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        res.json(getUniqueValues(rows, 'relation'));
+        const rows = await googleSheets.getRows(SHEETS.RELATION);
+        res.json(rows.length > 0 ? rows : []);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 exports.getProfessions = async (req, res) => {
     try {
-        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        res.json(getUniqueValues(rows, 'profession'));
+        const rows = await googleSheets.getRows(SHEETS.PROFESSION);
+        res.json(rows.length > 0 ? rows : []);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 exports.getMarriageStatuses = async (req, res) => {
     try {
-        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
-        const uniqueValues = getUniqueValues(rows, 'marriagestatus');
-        const defaults = ['Married', 'Unmarried', 'Widow', 'Widower', 'Divorced'].map(v => ({ marriagestatus: v }));
-        
-        // Merge defaults with unique values from sheet, ensuring uniqueness
-        const existingValues = uniqueValues.map(v => v.marriagestatus);
-        const result = [...uniqueValues];
-        defaults.forEach(d => {
-            if (!existingValues.includes(d.marriagestatus)) {
-                result.push(d);
-            }
-        });
-        
-        res.json(result);
+        const rows = await googleSheets.getRows(SHEETS.MARRIAGE_STATUS);
+        res.json(rows.length > 0 ? rows : []);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+exports.getCities = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.CITY);
+        res.json(rows.length > 0 ? rows : []);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+exports.getShubhechhakCities = async (req, res) => {
+    try {
+        const rows = await googleSheets.getRows(SHEETS.CITY);
+        res.json(rows.length > 0 ? rows : []);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
 

@@ -8,6 +8,8 @@ router.get('/bloodGroup', memberDataController.getBloodGroups);
 router.get('/relation', memberDataController.getRelations);
 router.get('/profession', memberDataController.getProfessions);
 router.get('/marriageStatus', memberDataController.getMarriageStatuses);
+router.get('/city', memberDataController.getCities);
+router.get('/shubhechhakCity', memberDataController.getShubhechhakCities);
 router.get('/getTotalDonation', memberDataController.getTotalDonation);
 router.get('/donationData', memberDataController.getDonationData);
 router.get('/appPin', memberDataController.getAppPin);
