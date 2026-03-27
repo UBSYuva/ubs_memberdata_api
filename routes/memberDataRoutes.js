@@ -17,6 +17,7 @@ router.get('/downloadMemberPDF', memberDataController.downloadMemberPDF);
 router.get('/downloadShubhechhakPDF', memberDataController.downloadShubhechhakPDF);
 router.get('/fetchByMemberId/:memberId', memberDataController.getMemberByMemberId);
 router.get('/appPin', memberDataController.getAppPin);
+router.get('/ping', memberDataController.ping);
 
 // 2. Base paths (GET)
 router.get('/', memberDataController.getAllMembers);

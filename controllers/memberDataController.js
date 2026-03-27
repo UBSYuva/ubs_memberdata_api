@@ -1,9 +1,9 @@
 const googleSheets = require('../googleSheets');
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+const { getBrowser } = require('../browserManager');
 const ExcelJS = require('exceljs');
+const chromium = require('@sparticuz/chromium');
 
 // Helper to format Date (consistent with previous implementation)
 const formatDate = (dateStr) => {
@@ -33,11 +33,12 @@ const SHEETS = {
 // GET: api/MemberData
 exports.getAllMembers = async (req, res) => {
     try {
-        const configRows = await googleSheets.getRows(SHEETS.CONFIG);
+        const [configRows, rows] = await Promise.all([
+            googleSheets.getRows(SHEETS.CONFIG),
+            googleSheets.getRows(SHEETS.MEMBERS)
+        ]);
         const isActive = configRows.find(c => c.key === 'active')?.value?.toLowerCase() === 'true';
         if (!isActive) return res.json([]);
-
-        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
         // Map to expected format and sort
         const formattedRows = rows.map(row => ({
             "Id": row._id,
@@ -118,11 +119,12 @@ exports.getMemberByMemberId = async (req, res) => {
 // GET: api/MemberData/shubhechhak
 exports.getShubhechhakMembers = async (req, res) => {
     try {
-        const configRows = await googleSheets.getRows(SHEETS.CONFIG);
+        const [configRows, rows] = await Promise.all([
+            googleSheets.getRows(SHEETS.CONFIG),
+            googleSheets.getRows(SHEETS.SHUBHECHHAK)
+        ]);
         const isActive = configRows.find(c => c.key === 'active')?.value?.toLowerCase() === 'true';
         if (!isActive) return res.json([]);
-
-        const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
         const formattedRows = rows.map(row => ({
             "Id": row._id,
             "Member Id": row.memberId,
@@ -419,14 +421,7 @@ exports.downloadDonationPDF = async (req, res) => {
             </html>
         `;
 
-        const isProduction = process.env.NODE_ENV === 'production';
-        const browser = await puppeteer.launch({ 
-            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
-            defaultViewport: chromium.defaultViewport,
-            executablePath: isProduction ? await chromium.executablePath() : undefined,
-            headless: isProduction ? chromium.headless : 'new',
-            channel: isProduction ? undefined : 'chrome',
-        });
+        const browser = await getBrowser();
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
         
@@ -435,7 +430,7 @@ exports.downloadDonationPDF = async (req, res) => {
             margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
             printBackground: true
         });
-        await browser.close();
+        await page.close();
 
         res.set({
             'Content-Type': 'application/pdf',
@@ -503,14 +498,7 @@ exports.downloadMemberPDF = async (req, res) => {
             </html>
         `;
 
-        const isProduction = process.env.NODE_ENV === 'production';
-        const browser = await puppeteer.launch({ 
-            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
-            defaultViewport: chromium.defaultViewport,
-            executablePath: isProduction ? await chromium.executablePath() : undefined,
-            headless: isProduction ? chromium.headless : 'new',
-            channel: isProduction ? undefined : 'chrome',
-        });
+        const browser = await getBrowser();
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
         
@@ -519,7 +507,7 @@ exports.downloadMemberPDF = async (req, res) => {
             margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
             printBackground: true
         });
-        await browser.close();
+        await page.close();
 
         res.set({
             'Content-Type': 'application/pdf',
@@ -587,14 +575,7 @@ exports.downloadShubhechhakPDF = async (req, res) => {
             </html>
         `;
 
-        const isProduction = process.env.NODE_ENV === 'production';
-        const browser = await puppeteer.launch({ 
-            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
-            defaultViewport: chromium.defaultViewport,
-            executablePath: isProduction ? await chromium.executablePath() : undefined,
-            headless: isProduction ? chromium.headless : 'new',
-            channel: isProduction ? undefined : 'chrome',
-        });
+        const browser = await getBrowser();
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
         
@@ -603,7 +584,7 @@ exports.downloadShubhechhakPDF = async (req, res) => {
             margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
             printBackground: true
         });
-        await browser.close();
+        await page.close();
 
         res.set({
             'Content-Type': 'application/pdf',
@@ -747,18 +728,19 @@ exports.updateMember = async (req, res) => {
         await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
 
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
-            for (const row of rows) {
-                if (row.memberId === oldMemberId && row._id !== id) {
-                    await googleSheets.updateRow(SHEETS.MEMBERS, '_id', row._id, { ...row, memberId: newMemberId });
-                }
-            }
+            const memberUpdates = rows
+                .filter(row => row.memberId === oldMemberId && row._id !== id)
+                .map(row => ({ idColumn: '_id', idValue: row._id, data: { ...row, memberId: newMemberId } }));
             
             const donationRows = await googleSheets.getRows(SHEETS.DONATION);
-            for (const dRow of donationRows) {
-                if (dRow.memberId === oldMemberId) {
-                    await googleSheets.updateRow(SHEETS.DONATION, 'id', dRow.id, { ...dRow, memberId: newMemberId });
-                }
-            }
+            const donationUpdates = donationRows
+                .filter(dRow => dRow.memberId === oldMemberId)
+                .map(dRow => ({ idColumn: 'id', idValue: dRow.id, data: { ...dRow, memberId: newMemberId } }));
+
+            await Promise.all([
+                googleSheets.batchUpdateRows(SHEETS.MEMBERS, memberUpdates),
+                googleSheets.batchUpdateRows(SHEETS.DONATION, donationUpdates)
+            ]);
         }
 
         res.json({ message: "Record updated successfully!" });
@@ -809,17 +791,19 @@ exports.updateShubhechhakMember = async (req, res) => {
         await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
 
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
-            for (const row of rows) {
-                if (row.memberId === oldMemberId && row._id !== id) {
-                    await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', row._id, { ...row, memberId: newMemberId });
-                }
-            }
+            const shubhechhakUpdates = rows
+                .filter(row => row.memberId === oldMemberId && row._id !== id)
+                .map(row => ({ idColumn: '_id', idValue: row._id, data: { ...row, memberId: newMemberId } }));
+            
             const donationRows = await googleSheets.getRows(SHEETS.DONATION);
-            for (const dRow of donationRows) {
-                if (dRow.memberId === oldMemberId) {
-                    await googleSheets.updateRow(SHEETS.DONATION, 'id', dRow.id, { ...dRow, memberId: newMemberId });
-                }
-            }
+            const donationUpdates = donationRows
+                .filter(dRow => dRow.memberId === oldMemberId)
+                .map(dRow => ({ idColumn: 'id', idValue: dRow.id, data: { ...dRow, memberId: newMemberId } }));
+
+            await Promise.all([
+                googleSheets.batchUpdateRows(SHEETS.SHUBHECHHAK, shubhechhakUpdates),
+                googleSheets.batchUpdateRows(SHEETS.DONATION, donationUpdates)
+            ]);
         }
 
         res.json({ message: "Record updated successfully!" });
@@ -865,9 +849,14 @@ exports.createDonation = async (req, res) => {
         const paymentNo = value.PaymentNo || value.paymentNo;
         const city = value.City || value.city;
 
+        const [donationRows, templateContent] = await Promise.all([
+            generateOnly ? Promise.resolve([]) : googleSheets.getRows(SHEETS.DONATION),
+            Promise.resolve().then(() => fs.readFileSync(path.join(__dirname, '..', 'template', 'Invoice.html'), 'utf8'))
+        ]);
+        
+        let nextId = 0;
         if (!generateOnly) {
-            const donationRows = await googleSheets.getRows(SHEETS.DONATION);
-            const nextId = donationRows.reduce((max, row) => Math.max(max, parseInt(row.id) || 0), 0) + 1;
+            nextId = donationRows.reduce((max, row) => Math.max(max, parseInt(row.id) || 0), 0) + 1;
             
             const paymentType = paymentTypeStr === "રોકડા" ? "cash" : (paymentTypeStr === "UPI" ? "upi" : (paymentTypeStr === "ચેક" ? "cheque" : null));
             const now = new Date().toISOString().slice(0, 10);
@@ -888,9 +877,7 @@ exports.createDonation = async (req, res) => {
             maxId = nextId;
         }
 
-        // Generate PDF (Same as before)
-        const templatePath = path.join(__dirname, '..', 'template', 'Invoice.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        let htmlContent = templateContent;
 
         const nowFormatted = new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 
@@ -906,15 +893,7 @@ exports.createDonation = async (req, res) => {
             .replace("#paymentNo#", !paymentNo ? (paymentTypeStr === "રોકડા" ? "" : "-") : paymentNo)
             .replace("#receiptNo#", maxId);
 
-        const isProduction = process.env.NODE_ENV === 'production';
-
-        const browser = await puppeteer.launch({ 
-            args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
-            defaultViewport: chromium.defaultViewport,
-            executablePath: isProduction ? await chromium.executablePath() : undefined,
-            headless: isProduction ? chromium.headless : 'new',
-            channel: isProduction ? undefined : 'chrome',
-        });
+        const browser = await getBrowser();
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
         // Small delay to ensure Google Fonts are fully rendered
@@ -926,7 +905,7 @@ exports.createDonation = async (req, res) => {
             quality: 95,
             fullPage: true
         });
-        await browser.close();
+        await page.close();
 
         const safeName = (name || "receipt").replace(/[^a-zA-Z0-9]/g, '_');
         const encodedName = encodeURIComponent(name || "receipt");
@@ -942,4 +921,13 @@ exports.createDonation = async (req, res) => {
         console.error(err);
         res.status(500).json({ message: err.message });
     }
+};
+
+// GET: api/MemberData/ping (Used for heartbeat/cron)
+exports.ping = (req, res) => {
+    res.json({ 
+        status: "active", 
+        timestamp: new Date().toISOString(),
+        message: "API is warm and ready!"
+    });
 };

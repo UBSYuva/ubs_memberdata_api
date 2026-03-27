@@ -5,6 +5,8 @@ require('dotenv').config();
 class GoogleSheetsService {
     constructor() {
         this.spreadsheetId = process.env.GOOGLE_SHEET_ID;
+        this.cache = {};
+        this.cacheTTL = 5 * 60 * 1000; // 5 minutes default TTL
         
         const authConfig = {
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -28,7 +30,6 @@ class GoogleSheetsService {
 
         let googleAppCreds = (process.env.GOOGLE_APPLICATION_CREDENTIALS || '').trim();
         
-        // Strip surrounding quotes if the string is wrapped in them (common in some env setups)
         if ((googleAppCreds.startsWith("'") && googleAppCreds.endsWith("'")) || 
             (googleAppCreds.startsWith('"') && googleAppCreds.endsWith('"'))) {
             googleAppCreds = googleAppCreds.substring(1, googleAppCreds.length - 1).trim();
@@ -42,8 +43,6 @@ class GoogleSheetsService {
                     authConfig.credentials = creds;
                 } catch (error) {
                     console.error('Error parsing GOOGLE_APPLICATION_CREDENTIALS JSON:', error.message);
-                    // If it's definitely JSON start but parsing failed, don't fallback to keyFile 
-                    // to avoid ENAMETOOLONG errors.
                 }
             } else {
                 authConfig.keyFile = googleAppCreds;
@@ -58,7 +57,20 @@ class GoogleSheetsService {
         this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     }
 
-    async getRows(sheetName) {
+    _clearCache(sheetName) {
+        if (sheetName) {
+            delete this.cache[sheetName];
+        } else {
+            this.cache = {};
+        }
+    }
+
+    async getRows(sheetName, forceRefresh = false) {
+        const now = Date.now();
+        if (!forceRefresh && this.cache[sheetName] && (now - this.cache[sheetName].timestamp < this.cacheTTL)) {
+            return this.cache[sheetName].data;
+        }
+
         try {
             const response = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
@@ -68,13 +80,20 @@ class GoogleSheetsService {
             if (!rows || rows.length === 0) return [];
 
             const headers = rows[0];
-            return rows.slice(1).map(row => {
+            const data = rows.slice(1).map(row => {
                 const obj = {};
                 headers.forEach((header, index) => {
                     obj[header] = row[index];
                 });
                 return obj;
             });
+
+            this.cache[sheetName] = {
+                timestamp: now,
+                data: data
+            };
+
+            return data;
         } catch (error) {
             console.error(`Error getting rows from ${sheetName}:`, error);
             throw error;
@@ -82,10 +101,12 @@ class GoogleSheetsService {
     }
 
     async addRow(sheetName, data) {
+        this._clearCache(sheetName);
         return this.addRows(sheetName, [data]);
     }
 
     async addRows(sheetName, dataArray) {
+        this._clearCache(sheetName);
         try {
             const headersResponse = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
@@ -107,6 +128,7 @@ class GoogleSheetsService {
     }
 
     async updateRow(sheetName, idColumn, idValue, data) {
+        this._clearCache(sheetName);
         try {
             const rowsResponse = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
@@ -136,6 +158,7 @@ class GoogleSheetsService {
     }
 
     async deleteRow(sheetName, idColumn, idValue) {
+        this._clearCache(sheetName);
         try {
             const rowsResponse = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
@@ -204,14 +227,13 @@ class GoogleSheetsService {
     }
 
     async updateEntireSheet(sheetName, data) {
+        this._clearCache(sheetName);
         try {
-            // First, clear existing content
             await this.sheets.spreadsheets.values.clear({
                 spreadsheetId: this.spreadsheetId,
                 range: `${sheetName}!A:Z`,
             });
 
-            // Then, update with new data
             await this.sheets.spreadsheets.values.update({
                 spreadsheetId: this.spreadsheetId,
                 range: `${sheetName}!A1`,
@@ -221,6 +243,46 @@ class GoogleSheetsService {
             console.log(`Sheet "${sheetName}" updated with ${data.length} rows.`);
         } catch (error) {
             console.error(`Error updating entire sheet ${sheetName}:`, error);
+            throw error;
+        }
+    }
+    async batchUpdateRows(sheetName, updates) {
+        if (!updates || updates.length === 0) return;
+        this._clearCache(sheetName);
+        try {
+            const rowsResponse = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: this.spreadsheetId,
+                range: `${sheetName}!A:Z`,
+            });
+            const rows = rowsResponse.data.values;
+            const headers = rows[0];
+            
+            const dataToUpdate = updates.map(update => {
+                const { idColumn, idValue, data } = update;
+                const idIndex = headers.indexOf(idColumn);
+                if (idIndex === -1) throw new Error(`Column ${idColumn} not found`);
+                
+                const rowIndex = rows.findIndex(row => row[idIndex] === idValue.toString());
+                if (rowIndex === -1) return null;
+
+                const updatedRow = headers.map(header => data[header] !== undefined ? data[header] : '');
+                return {
+                    range: `${sheetName}!A${rowIndex + 1}`,
+                    values: [updatedRow]
+                };
+            }).filter(u => u !== null);
+
+            if (dataToUpdate.length > 0) {
+                await this.sheets.spreadsheets.values.batchUpdate({
+                    spreadsheetId: this.spreadsheetId,
+                    resource: {
+                        valueInputOption: 'USER_ENTERED',
+                        data: dataToUpdate
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(`Error batch updating rows in ${sheetName}:`, error);
             throw error;
         }
     }
