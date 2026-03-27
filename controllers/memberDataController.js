@@ -35,6 +35,20 @@ const SHEETS = {
     BLOODGROUP: 'mst_bloodgroup'
 };
 
+const ensureMasterValue = async (sheetName, header, value) => {
+    if (!value || value === '' || value === 'null') return;
+    try {
+        const rows = await googleSheets.getRows(sheetName);
+        const exists = rows.find(r => (r[header] || '').trim().toLowerCase() === value.trim().toLowerCase());
+        if (!exists) {
+            await googleSheets.addRow(sheetName, { [header]: value.trim() });
+            console.log(`Added new master value "${value}" to ${sheetName}`);
+        }
+    } catch (e) {
+        console.error(`Error ensuring master value in ${sheetName}:`, e.message);
+    }
+};
+
 // GET: api/MemberData
 exports.getAllMembers = async (req, res) => {
     try {
@@ -644,6 +658,16 @@ exports.addMember = async (req, res) => {
         };
 
         await googleSheets.addRow(SHEETS.MEMBERS, newRow);
+
+        // Update Master Data Sheets
+        await Promise.all([
+            ensureMasterValue(SHEETS.RELATION, 'relation', newRow.relation),
+            ensureMasterValue(SHEETS.MARRIAGE_STATUS, 'marriageStatus', newRow.marriagestatus),
+            ensureMasterValue(SHEETS.PROFESSION, 'profession', newRow.profession),
+            ensureMasterValue(SHEETS.BLOODGROUP, 'bloodGroup', newRow.bloodGroup),
+            ensureMasterValue(SHEETS.CITY, 'city', newRow.city)
+        ]);
+
         res.json({ message: isNew ? `Record added successfully! Your New member id is ${newMemberId}` : "Record added successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
@@ -687,6 +711,16 @@ exports.addShubhechhakMember = async (req, res) => {
         };
 
         await googleSheets.addRow(SHEETS.SHUBHECHHAK, newRow);
+        
+        // Update Master Data Sheets 
+        await Promise.all([
+            ensureMasterValue(SHEETS.RELATION, 'relation', newRow.relation),
+            ensureMasterValue(SHEETS.MARRIAGE_STATUS, 'marriageStatus', newRow.marriagestatus),
+            ensureMasterValue(SHEETS.PROFESSION, 'profession', newRow.profession),
+            ensureMasterValue(SHEETS.BLOODGROUP, 'bloodGroup', newRow.bloodGroup),
+            ensureMasterValue(SHEETS.CITY, 'city', newRow.city)
+        ]);
+
         res.json({ message: isNew ? `Record added successfully! Your New member id is ${newMemberId}` : "Record added successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
@@ -733,6 +767,15 @@ exports.updateMember = async (req, res) => {
         };
 
         await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
+
+        // Update Master Data Sheets
+        await Promise.all([
+            ensureMasterValue(SHEETS.RELATION, 'relation', updatedData.relation),
+            ensureMasterValue(SHEETS.MARRIAGE_STATUS, 'marriageStatus', updatedData.marriagestatus),
+            ensureMasterValue(SHEETS.PROFESSION, 'profession', updatedData.profession),
+            ensureMasterValue(SHEETS.BLOODGROUP, 'bloodGroup', updatedData.bloodGroup),
+            ensureMasterValue(SHEETS.CITY, 'city', updatedData.city)
+        ]);
 
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
             const memberUpdates = rows
@@ -796,6 +839,15 @@ exports.updateShubhechhakMember = async (req, res) => {
         };
 
         await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
+
+        // Update Master Data Sheets
+        await Promise.all([
+            ensureMasterValue(SHEETS.RELATION, 'relation', updatedData.relation),
+            ensureMasterValue(SHEETS.MARRIAGE_STATUS, 'marriageStatus', updatedData.marriagestatus),
+            ensureMasterValue(SHEETS.PROFESSION, 'profession', updatedData.profession),
+            ensureMasterValue(SHEETS.BLOODGROUP, 'bloodGroup', updatedData.bloodGroup),
+            ensureMasterValue(SHEETS.CITY, 'city', updatedData.city)
+        ]);
 
         if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
             const shubhechhakUpdates = rows
@@ -881,6 +933,10 @@ exports.createDonation = async (req, res) => {
             };
 
             await googleSheets.addRow(SHEETS.DONATION, newDonation);
+            
+            // Update Master Data Sheet
+            await ensureMasterValue(SHEETS.CITY, 'city', city);
+
             maxId = nextId;
         }
 
