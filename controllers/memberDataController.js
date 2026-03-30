@@ -5,6 +5,15 @@ const { getBrowser } = require('../browserManager');
 const ExcelJS = require('exceljs');
 const chromium = require('@sparticuz/chromium');
 
+// Load logo once and convert to Base64 for embedding
+let logoBase64 = '';
+try {
+    const logoBuffer = fs.readFileSync(path.join(__dirname, '..', 'template', 'logo.png'));
+    logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+} catch (error) {
+    console.error("Warning: Logo file not found at template/logo.png");
+}
+
 // Helper to format Date (consistent with previous implementation)
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -996,6 +1005,7 @@ exports.createDonation = async (req, res) => {
             .replace("#paymentType#", paymentTypeStr === "રોકડા" ? paymentTypeStr : paymentTypeStr + " દ્વારા ")
             .replace("#paymentType-1#", !paymentTypeStr ? "-" : (paymentTypeStr === "રોકડા" ? "" : paymentTypeStr + " નંબર: "))
             .replace("#paymentNo#", !paymentNo ? (paymentTypeStr === "રોકડા" ? "" : "-") : paymentNo)
+            .replace("#logo#", logoBase64)
             .replace("#receiptNo#", maxId);
 
         const browser = await getBrowser();
