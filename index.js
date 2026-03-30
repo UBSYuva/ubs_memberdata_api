@@ -15,6 +15,7 @@ const allowedOrigins = [
     "http://localhost:4200",
     "https://localhost:51087",
     "http://localhost:51087",
+    "http://localhost:1234",
     "https://ubs-admin.netlify.app"
 ];
 
@@ -24,15 +25,15 @@ app.use(cors({
         if (!origin) return callback(null, true);
         
         const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
-                          origin.startsWith('http://localhost') || 
-                          origin.startsWith('https://localhost') ||
-                          origin.startsWith('http://127.0.0.1');
+                          /^http:\/\/localhost(:\d+)?$/.test(origin) ||
+                          /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
                           
         if (isAllowed) {
             callback(null, true);
         } else {
             console.log('Origin not allowed by CORS:', origin);
-            callback(new Error('Not allowed by CORS'));
+            // Instead of returning an error, we return false to let the standard CORS handling take over
+            callback(null, false);
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
