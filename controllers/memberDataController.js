@@ -360,6 +360,7 @@ exports.getAppPin = async (req, res) => {
         let adminPin = configRows.find(c => c.key === 'adminPin')?.value;
         let viewMembersPin = configRows.find(c => c.key === 'viewMembersPin')?.value;
         let donationInvoicePin = configRows.find(c => c.key === 'donationInvoicePin')?.value;
+        let viewOnlyPin = configRows.find(c => c.key === 'viewOnlyPin')?.value;
         const legacyPin = configRows.find(c => c.key === 'appPin')?.value;
 
         // Proactively create missing pins in googlesheet if they don't exist
@@ -375,11 +376,16 @@ exports.getAppPin = async (req, res) => {
             donationInvoicePin = '2222';
             await googleSheets.addRow(SHEETS.CONFIG, { key: 'donationInvoicePin', value: donationInvoicePin });
         }
+        if (!viewOnlyPin) {
+            viewOnlyPin = '3333';
+            await googleSheets.addRow(SHEETS.CONFIG, { key: 'viewOnlyPin', value: viewOnlyPin });
+        }
 
         res.json({ 
             admin: adminPin,
             viewMembers: viewMembersPin,
             donationInvoice: donationInvoicePin,
+            viewOnly: viewOnlyPin,
             pin: legacyPin || adminPin // Backward compatibility
         });
     } catch (err) {
