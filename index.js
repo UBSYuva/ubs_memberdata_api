@@ -13,10 +13,10 @@ const port = process.env.PORT || 3000;
 const allowedOrigins = [
     "https://localhost:4200",
     "http://localhost:4200",
-    "https://localhost:51087",
-    "http://localhost:51087",
     "http://localhost:1234",
-    "https://ubs-admin.netlify.app"
+    "https://ubs-admin.netlify.app",
+    "https://ubs-member-data.vercel.app",
+    "https://ubs-member-data-ui.vercel.app"
 ];
 
 app.use(cors({
@@ -26,14 +26,14 @@ app.use(cors({
         
         const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
                           /^http:\/\/localhost(:\d+)?$/.test(origin) ||
-                          /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+                          /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+                          /\.vercel\.app$/.test(origin); // Allow all vercel subdomains for demo/dev
                           
         if (isAllowed) {
             callback(null, true);
         } else {
             console.log('Origin not allowed by CORS:', origin);
-            // Instead of returning an error, we return false to let the standard CORS handling take over
-            callback(null, false);
+            callback(null, new Error('Not allowed by CORS'));
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
