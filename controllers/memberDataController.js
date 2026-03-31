@@ -84,7 +84,8 @@ exports.getAllMembers = async (req, res) => {
             "Company Address": row.companyAddress,
             "Mobile": row.mobile,
             "Blood Group": row.bloodGroup,
-            "City": row.city
+            "City": row.city,
+            "ParentId": row.parentId
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
         res.json(formattedRows);
@@ -136,7 +137,8 @@ exports.getMemberById = async (req, res) => {
             "Company": member.companyName,
             "Company Address": member.companyAddress,
             "Mobile": member.mobile,
-            "Gender": member.gender
+            "Gender": member.gender,
+            "ParentId": member.parentId
         };
         res.json({ "Table": [result] });
     } catch (err) {
@@ -189,7 +191,8 @@ exports.getShubhechhakMembers = async (req, res) => {
             "Company Address": row.companyAddress,
             "Mobile": row.mobile,
             "Blood Group": row.bloodGroup,
-            "City": row.city
+            "City": row.city,
+            "ParentId": row.parentId
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
         res.json(formattedRows);
