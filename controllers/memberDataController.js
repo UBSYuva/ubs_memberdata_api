@@ -346,6 +346,7 @@ exports.getDonationData = async (req, res) => {
             "Mobile": row.mobile,
             "Amount": row.amount,
             "PaymentType": row.paymentType,
+            "DonationType": row.donationType,
             "PaymentNo": row.paymentNo,
             "PaymentDate": row.paymentDate
         })).sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
@@ -408,6 +409,7 @@ exports.downloadDonationData = async (req, res) => {
             mobile: row.mobile,
             amount: row.amount,
             paymentType: row.paymentType,
+            donationType: row.donationType,
             paymentNo: row.paymentNo,
             paymentDate: row.paymentDate
         }));
@@ -445,6 +447,7 @@ exports.downloadDonationPDF = async (req, res) => {
                 <td>${row.name || '-'}</td>
                 <td>${row.city || '-'}</td>
                 <td>${row.amount || '0'}</td>
+                <td>${row.donationType || '-'}</td>
                 <td>${row.paymentType || '-'}</td>
                 <td>${row.paymentDate || '-'}</td>
             </tr>
@@ -464,7 +467,7 @@ exports.downloadDonationPDF = async (req, res) => {
                 </style>
             </head>
             <body>
-                <h2>UBS Seva Trust - Donation History</h2>
+                <h2>UBS - Donation History</h2>
                 <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
                 <table>
                     <thead>
@@ -474,6 +477,7 @@ exports.downloadDonationPDF = async (req, res) => {
                             <th>Donor Name</th>
                             <th>City</th>
                             <th>Amount</th>
+                            <th>Donation Type</th>
                             <th>Payment</th>
                             <th>Date</th>
                         </tr>
@@ -957,9 +961,9 @@ exports.deleteDonation = async (req, res) => {
 exports.createDonation = async (req, res) => {
     try {
         const value = req.body;
-        let maxId = "-";
-
         const generateOnly = value.GenerateOnly !== undefined ? value.GenerateOnly : value.generateOnly;
+        const saveOnly = value.SaveOnly !== undefined ? value.SaveOnly : value.saveOnly;
+        let maxId = value.id || value.Id || "-"; // Use provided ID if available
         const paymentTypeStr = value.PaymentType || value.paymentType;
         const memberId = value.MemberId || value.memberId;
         const amount = value.Amount || value.amount;
@@ -967,14 +971,18 @@ exports.createDonation = async (req, res) => {
         const mobile = value.Mobile || value.mobile;
         const paymentNo = value.PaymentNo || value.paymentNo;
         const city = value.City || value.city;
+        const donationType = value.DonationType || value.donationType || "UBS Trust";
 
         const [donationRows, templateContent] = await Promise.all([
-            generateOnly ? Promise.resolve([]) : googleSheets.getRows(SHEETS.DONATION),
-            Promise.resolve().then(() => fs.readFileSync(path.join(__dirname, '..', 'template', 'Invoice.html'), 'utf8'))
+            (generateOnly) ? Promise.resolve([]) : googleSheets.getRows(SHEETS.DONATION),
+            (saveOnly) ? Promise.resolve('') : fs.promises.readFile(path.join(__dirname, '..', 'template', 'Invoice.html'), 'utf8')
         ]);
         
         let nextId = 0;
         if (!generateOnly) {
+            // Ensure headers exist
+            await googleSheets.ensureHeaders(SHEETS.DONATION, ['id', 'memberId', 'amount', 'name', 'mobile', 'paymentType', 'donationType', 'paymentNo', 'paymentDate', 'city']);
+
             nextId = donationRows.reduce((max, row) => Math.max(max, parseInt(row.id) || 0), 0) + 1;
             
             const paymentType = paymentTypeStr === "રોકડા" ? "cash" : (paymentTypeStr === "UPI" ? "upi" : (paymentTypeStr === "ચેક" ? "cheque" : null));
@@ -989,7 +997,8 @@ exports.createDonation = async (req, res) => {
                 paymentType: paymentType,
                 paymentNo: paymentNo || '',
                 paymentDate: now,
-                city: city
+                city: city,
+                donationType: donationType
             };
 
             await googleSheets.addRow(SHEETS.DONATION, newDonation);
@@ -998,6 +1007,10 @@ exports.createDonation = async (req, res) => {
             await ensureMasterValue(SHEETS.CITY, 'city', city);
 
             maxId = nextId;
+
+            if (saveOnly) {
+                return res.json({ success: true, message: "Donation data saved successfully!", id: maxId });
+            }
         }
 
         let htmlContent = templateContent;
@@ -1015,6 +1028,7 @@ exports.createDonation = async (req, res) => {
             .replace("#paymentType-1#", !paymentTypeStr ? "-" : (paymentTypeStr === "રોકડા" ? "" : paymentTypeStr + " નંબર: "))
             .replace("#paymentNo#", !paymentNo ? (paymentTypeStr === "રોકડા" ? "" : "-") : paymentNo)
             .replace("#logo#", logoBase64)
+            .replace("#trustName#", donationType === "UBS" ? "શ્રી ઉનેવાળ બ્રહ્મસમાજ, વડોદરા" : "શ્રી ઉનેવાળ બ્રહ્મસમાજ સેવા ટ્રસ્ટ, વડોદરા")
             .replace("#receiptNo#", maxId);
 
         const browser = await getBrowser();
