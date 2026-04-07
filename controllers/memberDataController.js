@@ -346,9 +346,10 @@ exports.getDonationData = async (req, res) => {
         }
 
         if (donationType) {
+            const searchType = donationType.toString().toLowerCase().trim();
             rows = rows.filter(row => {
-                const type = row.donationType || 'UBS Trust';
-                return type === donationType;
+                const type = (row.donationType || row.DonationType || 'UBS Trust').toString().toLowerCase().trim();
+                return type === searchType;
             });
         }
 
@@ -360,7 +361,7 @@ exports.getDonationData = async (req, res) => {
             "Mobile": row.mobile,
             "Amount": row.amount,
             "PaymentType": row.paymentType,
-            "DonationType": row.donationType,
+            "DonationType": (row.donationType || row.DonationType || "UBS Trust").toString().trim(),
             "PaymentNo": row.paymentNo,
             "PaymentDate": row.paymentDate
         })).sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
