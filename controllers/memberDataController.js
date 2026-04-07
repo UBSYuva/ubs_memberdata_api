@@ -85,7 +85,8 @@ exports.getAllMembers = async (req, res) => {
             "Mobile": row.mobile,
             "Blood Group": row.bloodGroup,
             "City": row.city,
-            "ParentId": row.parentId
+            "ParentId": row.parentId,
+            "LastUpdated": row.last_updated || ''
         })).sort((a, b) => parseInt(a["Member Id"]) - parseInt(b["Member Id"]));
 
         res.json(formattedRows);
@@ -138,7 +139,8 @@ exports.getMemberById = async (req, res) => {
             "Company Address": member.companyAddress,
             "Mobile": member.mobile,
             "Gender": member.gender,
-            "ParentId": member.parentId
+            "ParentId": member.parentId,
+            "LastUpdated": member.last_updated || ''
         };
         res.json({ "Table": [result] });
     } catch (err) {
@@ -445,8 +447,10 @@ exports.downloadDonationData = async (req, res) => {
             const trustRow = worksheet.addRow({ amount: 'UBS Trust Total:', paymentType: ubsTrustTotal.toLocaleString() });
             const grandRow = worksheet.addRow({ amount: 'Grand Total:', paymentType: (ubsTotal + ubsTrustTotal).toLocaleString() });
 
+            const genRow = worksheet.addRow({ amount: 'Generated on:', paymentType: new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) });
+            
             // Apply styling
-            [ubsRow, trustRow, grandRow].forEach(row => {
+            [ubsRow, trustRow, grandRow, genRow].forEach(row => {
                 row.getCell('amount').font = { bold: true };
                 row.getCell('paymentType').font = { bold: true };
             });
@@ -498,7 +502,7 @@ exports.downloadDonationPDF = async (req, res) => {
             </head>
             <body>
                 <h2>UBS - Donation History</h2>
-                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</p>
                 <table>
                     <thead>
                         <tr>
@@ -594,7 +598,7 @@ exports.downloadMemberPDF = async (req, res) => {
             </head>
             <body>
                 <h2>UBS Seva Trust - Members Directory</h2>
-                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</p>
                 <table>
                     <thead>
                         <tr>
@@ -671,7 +675,7 @@ exports.downloadShubhechhakPDF = async (req, res) => {
             </head>
             <body>
                 <h2>UBS Seva Trust - Shubhechhak Directory</h2>
-                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+                <p style="font-size: 10px; color: #94a3b8; text-align: right;">Generated on: ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</p>
                 <table>
                     <thead>
                         <tr>
@@ -732,7 +736,7 @@ exports.addMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.MEMBERS, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
@@ -754,7 +758,8 @@ exports.addMember = async (req, res) => {
             mobile: value.Mobile || value.mobile,
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
             gender: value.Gender || value.gender,
-            city: value.City || value.city
+            city: value.City || value.city,
+            last_updated: new Date().toISOString()
         };
 
         await googleSheets.addRow(SHEETS.MEMBERS, newRow);
@@ -789,7 +794,7 @@ exports.addShubhechhakMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.SHUBHECHHAK, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
@@ -811,7 +816,8 @@ exports.addShubhechhakMember = async (req, res) => {
             mobile: value.Mobile || value.mobile,
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
             gender: value.Gender || value.gender,
-            city: value.City || value.city
+            city: value.City || value.city,
+            last_updated: new Date().toISOString()
         };
 
         await googleSheets.addRow(SHEETS.SHUBHECHHAK, newRow);
@@ -851,7 +857,7 @@ exports.updateMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.MEMBERS, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth ?? value.dob ?? value['Date Of Birth']);
@@ -871,7 +877,8 @@ exports.updateMember = async (req, res) => {
             mobile: value.Mobile ?? value.mobile ?? oldMember.mobile,
             bloodGroup: value.BloodGroup ?? value['Blood Group'] ?? value.bloodGroup ?? oldMember.bloodGroup,
             city: value.City ?? value.city ?? oldMember.city,
-            gender: value.Gender ?? value.gender ?? oldMember.gender
+            gender: value.Gender ?? value.gender ?? oldMember.gender,
+            last_updated: new Date().toISOString()
         };
 
         await googleSheets.updateRow(SHEETS.MEMBERS, '_id', id, updatedData);
@@ -927,7 +934,7 @@ exports.updateShubhechhakMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.SHUBHECHHAK, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth ?? value.dob ?? value['Date Of Birth']);
@@ -947,7 +954,8 @@ exports.updateShubhechhakMember = async (req, res) => {
             mobile: value.Mobile ?? value.mobile ?? oldMember.mobile,
             bloodGroup: value.BloodGroup ?? value['Blood Group'] ?? value.bloodGroup ?? oldMember.bloodGroup,
             city: value.City ?? value.city ?? oldMember.city,
-            gender: value.Gender ?? value.gender ?? oldMember.gender
+            gender: value.Gender ?? value.gender ?? oldMember.gender,
+            last_updated: new Date().toISOString()
         };
 
         await googleSheets.updateRow(SHEETS.SHUBHECHHAK, '_id', id, updatedData);
