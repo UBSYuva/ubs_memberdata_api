@@ -287,11 +287,18 @@ exports.getTotalDonation = async (req, res) => {
                     monthName: monthNames[month],
                     avgDonation: 0, 
                     totalEntries: 0, 
-                    totalDonation: 0 
+                    totalDonation: 0,
+                    ubsTotal: 0,
+                    ubsTrustTotal: 0
                 };
             }
             aggregation[key].totalEntries += 1;
             aggregation[key].totalDonation += amount;
+            if (row.donationType === 'UBS') {
+                aggregation[key].ubsTotal += amount;
+            } else {
+                aggregation[key].ubsTrustTotal += amount;
+            }
         });
 
         const result = Object.values(aggregation)
@@ -420,6 +427,21 @@ exports.downloadDonationData = async (req, res) => {
         if (data.length > 0) {
             worksheet.columns = Object.keys(data[0]).map(key => ({ header: key, key: key }));
             worksheet.addRows(data);
+
+            // Add Summary Rows
+            worksheet.addRow([]);
+            const ubsTotal = data.filter(r => r.donationType === 'UBS').reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+            const ubsTrustTotal = data.filter(r => r.donationType !== 'UBS').reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+            
+            const ubsRow = worksheet.addRow({ amount: 'UBS Total:', paymentType: ubsTotal.toLocaleString() });
+            const trustRow = worksheet.addRow({ amount: 'UBS Trust Total:', paymentType: ubsTrustTotal.toLocaleString() });
+            const grandRow = worksheet.addRow({ amount: 'Grand Total:', paymentType: (ubsTotal + ubsTrustTotal).toLocaleString() });
+
+            // Apply styling
+            [ubsRow, trustRow, grandRow].forEach(row => {
+                row.getCell('amount').font = { bold: true };
+                row.getCell('paymentType').font = { bold: true };
+            });
         }
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -486,6 +508,24 @@ exports.downloadDonationPDF = async (req, res) => {
                         ${rowsHtml}
                     </tbody>
                 </table>
+
+                <div style="margin-top: 30px; page-break-inside: avoid; width: 350px;">
+                    <h3 style="color: #4f46e5; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-size: 16px;">Fund Segregation Summary</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <tr>
+                            <th style="padding: 10px; background-color: #f8fafc; border: 1px solid #e2e8f0; text-align: left;">UBS Total</th>
+                            <td style="padding: 10px; font-weight: bold; border: 1px solid #e2e8f0; text-align: right;">₹ ${sortedRows.filter(r => r.donationType === 'UBS').reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <th style="padding: 10px; background-color: #f8fafc; border: 1px solid #e2e8f0; text-align: left;">UBS Trust Total</th>
+                            <td style="padding: 10px; font-weight: bold; border: 1px solid #e2e8f0; text-align: right;">₹ ${sortedRows.filter(r => r.donationType !== 'UBS').reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}</td>
+                        </tr>
+                        <tr style="background-color: #f1f5f9;">
+                            <th style="padding: 10px; border: 1px solid #e2e8f0; font-weight: 800; text-align: left;">Grand Total</th>
+                            <td style="padding: 10px; font-weight: 800; color: #4f46e5; font-size: 14px; text-align: right; border: 1px solid #e2e8f0;">₹ ${sortedRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}</td>
+                        </tr>
+                    </table>
+                </div>
             </body>
             </html>
         `;
