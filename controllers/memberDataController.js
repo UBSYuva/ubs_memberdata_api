@@ -318,7 +318,7 @@ exports.getTotalDonation = async (req, res) => {
 // Donation List (Filtered by Year & Month)
 exports.getDonationData = async (req, res) => {
     try {
-        const { year, month, filter, date: dateParam } = req.query;
+        const { year, month, filter, date: dateParam, donationType } = req.query;
         let rows = await googleSheets.getRows(SHEETS.DONATION);
 
         if (filter === 'today') {
@@ -342,6 +342,13 @@ exports.getDonationData = async (req, res) => {
                     return date.getMonth().toString() === month;
                 }
                 return true;
+            });
+        }
+
+        if (donationType) {
+            rows = rows.filter(row => {
+                const type = row.donationType || 'UBS Trust';
+                return type === donationType;
             });
         }
 
