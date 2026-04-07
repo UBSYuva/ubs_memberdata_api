@@ -350,7 +350,7 @@ exports.getDonationData = async (req, res) => {
         if (donationType) {
             const searchType = donationType.toString().toLowerCase().trim();
             rows = rows.filter(row => {
-                const type = (row.donationType || row.DonationType || 'UBS Trust').toString().toLowerCase().trim();
+                const type = (row.donationType || row.DonationType || 'UBS').toString().toLowerCase().trim();
                 return type === searchType;
             });
         }
@@ -363,7 +363,7 @@ exports.getDonationData = async (req, res) => {
             "Mobile": row.mobile,
             "Amount": row.amount,
             "PaymentType": row.paymentType,
-            "DonationType": (row.donationType || row.DonationType || "UBS Trust").toString().trim(),
+            "DonationType": (row.donationType || row.DonationType || "UBS").toString().trim(),
             "PaymentNo": row.paymentNo,
             "PaymentDate": row.paymentDate
         })).sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
@@ -1027,7 +1027,7 @@ exports.createDonation = async (req, res) => {
         const mobile = value.Mobile || value.mobile;
         const paymentNo = value.PaymentNo || value.paymentNo;
         const city = value.City || value.city;
-        const donationType = value.DonationType || value.donationType || "UBS Trust";
+        const donationType = value.DonationType || value.donationType || "UBS";
 
         const [donationRows, templateContent] = await Promise.all([
             (generateOnly) ? Promise.resolve([]) : googleSheets.getRows(SHEETS.DONATION),
