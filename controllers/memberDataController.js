@@ -83,6 +83,7 @@ exports.getAllMembers = async (req, res) => {
             "Company": row.companyName,
             "Company Address": row.companyAddress,
             "Mobile": row.mobile,
+            "MobileVerified": row.mobile_verified === 'true',
             "Blood Group": row.bloodGroup,
             "City": row.city,
             "ParentId": row.parentId,
@@ -138,6 +139,7 @@ exports.getMemberById = async (req, res) => {
             "Company": member.companyName,
             "Company Address": member.companyAddress,
             "Mobile": member.mobile,
+            "MobileVerified": member.mobile_verified === 'true',
             "Gender": member.gender,
             "ParentId": member.parentId,
             "LastUpdated": member.last_updated || ''
@@ -192,6 +194,7 @@ exports.getShubhechhakMembers = async (req, res) => {
             "Company": row.companyName,
             "Company Address": row.companyAddress,
             "Mobile": row.mobile,
+            "MobileVerified": row.mobile_verified === 'true',
             "Blood Group": row.bloodGroup,
             "City": row.city,
             "ParentId": row.parentId
@@ -361,6 +364,7 @@ exports.getDonationData = async (req, res) => {
             "Name": row.name,
             "City": row.city,
             "Mobile": row.mobile,
+            "MobileVerified": row.mobile_verified === 'true',
             "Amount": row.amount,
             "PaymentType": row.paymentType,
             "DonationType": (row.donationType || row.DonationType || "UBS").toString().trim(),
@@ -736,7 +740,7 @@ exports.addMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'mobile_verified', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.MEMBERS, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
@@ -756,6 +760,7 @@ exports.addMember = async (req, res) => {
             companyName: value.Company || value.CompanyName || value.companyName || value.company,
             companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'],
             mobile: value.Mobile || value.mobile,
+            mobile_verified: (value.MobileVerified || value.mobile_verified || "false").toString(),
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
             gender: value.Gender || value.gender,
             city: value.City || value.city,
@@ -794,7 +799,7 @@ exports.addShubhechhakMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'mobile_verified', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.SHUBHECHHAK, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth || value.dob || value['Date Of Birth']);
@@ -814,6 +819,7 @@ exports.addShubhechhakMember = async (req, res) => {
             companyName: value.Company || value.CompanyName || value.companyName || value.company,
             companyAddress: value.CompanyAddress || value.companyAddress || value['Company Address'],
             mobile: value.Mobile || value.mobile,
+            mobile_verified: (value.MobileVerified || value.mobile_verified || "false").toString(),
             bloodGroup: value.BloodGroup || value['Blood Group'] || value.bloodGroup,
             gender: value.Gender || value.gender,
             city: value.City || value.city,
@@ -857,7 +863,7 @@ exports.updateMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'mobile_verified', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.MEMBERS, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth ?? value.dob ?? value['Date Of Birth']);
@@ -875,6 +881,7 @@ exports.updateMember = async (req, res) => {
             companyName: value.Company ?? value.CompanyName ?? value.companyName ?? value.company ?? oldMember.companyName,
             companyAddress: value.CompanyAddress ?? value.companyAddress ?? value['Company Address'] ?? oldMember.companyAddress,
             mobile: value.Mobile ?? value.mobile ?? oldMember.mobile,
+            mobile_verified: (value.MobileVerified ?? value.mobile_verified ?? oldMember.mobile_verified ?? "false").toString(),
             bloodGroup: value.BloodGroup ?? value['Blood Group'] ?? value.bloodGroup ?? oldMember.bloodGroup,
             city: value.City ?? value.city ?? oldMember.city,
             gender: value.Gender ?? value.gender ?? oldMember.gender,
@@ -934,7 +941,7 @@ exports.updateShubhechhakMember = async (req, res) => {
         }
 
         // Ensure headers exist
-        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'bloodGroup', 'city', 'last_updated'];
+        const requiredKeys = ['_id', 'memberId', 'name', 'gender', 'relation', 'dob', 'dateOfBirth', 'marriagestatus', 'profession', 'designation', 'address', 'companyName', 'companyAddress', 'mobile', 'mobile_verified', 'bloodGroup', 'city', 'last_updated'];
         await googleSheets.ensureHeaders(SHEETS.SHUBHECHHAK, requiredKeys);
 
         const dob = formatDate(value.DateOfBirth ?? value.dob ?? value['Date Of Birth']);
@@ -952,6 +959,7 @@ exports.updateShubhechhakMember = async (req, res) => {
             companyName: value.Company ?? value.CompanyName ?? value.companyName ?? value.company ?? oldMember.companyName,
             companyAddress: value.CompanyAddress ?? value.companyAddress ?? value['Company Address'] ?? oldMember.companyAddress,
             mobile: value.Mobile ?? value.mobile ?? oldMember.mobile,
+            mobile_verified: (value.MobileVerified ?? value.mobile_verified ?? oldMember.mobile_verified ?? "false").toString(),
             bloodGroup: value.BloodGroup ?? value['Blood Group'] ?? value.bloodGroup ?? oldMember.bloodGroup,
             city: value.City ?? value.city ?? oldMember.city,
             gender: value.Gender ?? value.gender ?? oldMember.gender,
