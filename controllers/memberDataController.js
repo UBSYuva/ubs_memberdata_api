@@ -1,4 +1,5 @@
 const googleSheets = require('../googleSheets');
+const googleContacts = require('../googleContactsService');
 const path = require('path');
 const fs = require('fs');
 const { getBrowser } = require('../browserManager');
@@ -778,6 +779,13 @@ exports.addMember = async (req, res) => {
             ensureMasterValue(SHEETS.CITY, 'city', newRow.city)
         ]);
 
+        // Sync to Google Contacts (Ajivan member)
+        try {
+            await googleContacts.syncMember(newRow, 'Ajivan');
+        } catch (syncError) {
+            console.error('Failed to sync to Google Contacts:', syncError.message);
+        }
+
         res.json({ message: isNew ? `Record added successfully! Your New member id is ${newMemberId}` : "Record added successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
@@ -836,6 +844,13 @@ exports.addShubhechhakMember = async (req, res) => {
             ensureMasterValue(SHEETS.BLOODGROUP, 'bloodGroup', newRow.bloodGroup),
             ensureMasterValue(SHEETS.CITY, 'city', newRow.city)
         ]);
+
+        // Sync to Google Contacts (Shubhechhak member)
+        try {
+            await googleContacts.syncMember(newRow, 'Shubhechhak');
+        } catch (syncError) {
+            console.error('Failed to sync to Google Contacts:', syncError.message);
+        }
 
         res.json({ message: isNew ? `Record added successfully! Your New member id is ${newMemberId}` : "Record added successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
@@ -913,6 +928,13 @@ exports.updateMember = async (req, res) => {
                 googleSheets.batchUpdateRows(SHEETS.MEMBERS, memberUpdates),
                 googleSheets.batchUpdateRows(SHEETS.DONATION, donationUpdates)
             ]);
+        }
+
+        // Sync to Google Contacts (Ajivan member update)
+        try {
+            await googleContacts.syncMember(updatedData, 'Ajivan');
+        } catch (syncError) {
+            console.error('Failed to sync to Google Contacts:', syncError.message);
         }
 
         res.json({ message: "Record updated successfully!" });
@@ -993,6 +1015,13 @@ exports.updateShubhechhakMember = async (req, res) => {
             ]);
         }
 
+        // Sync to Google Contacts (Shubhechhak member update)
+        try {
+            await googleContacts.syncMember(updatedData, 'Shubhechhak');
+        } catch (syncError) {
+            console.error('Failed to sync to Google Contacts:', syncError.message);
+        }
+
         res.json({ message: "Record updated successfully!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
@@ -1000,7 +1029,20 @@ exports.updateShubhechhakMember = async (req, res) => {
 // DELETE: api/MemberData/:id
 exports.deleteMember = async (req, res) => {
     try {
-        await googleSheets.deleteRow(SHEETS.MEMBERS, '_id', req.params.id);
+        const id = req.params.id;
+        const rows = await googleSheets.getRows(SHEETS.MEMBERS);
+        const member = rows.find(r => r._id === id);
+
+        await googleSheets.deleteRow(SHEETS.MEMBERS, '_id', id);
+
+        if (member) {
+            try {
+                await googleContacts.deleteContact(member.memberId, member.name, 'Ajivan');
+            } catch (syncError) {
+                console.error('Failed to delete Google Contact:', syncError.message);
+            }
+        }
+
         res.json({ message: "Record deleted successfully from Member list!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
@@ -1008,7 +1050,20 @@ exports.deleteMember = async (req, res) => {
 // DELETE: api/MemberData/shubhechhak/:id
 exports.deleteShubhechhakMember = async (req, res) => {
     try {
-        await googleSheets.deleteRow(SHEETS.SHUBHECHHAK, '_id', req.params.id);
+        const id = req.params.id;
+        const rows = await googleSheets.getRows(SHEETS.SHUBHECHHAK);
+        const member = rows.find(r => r._id === id);
+
+        await googleSheets.deleteRow(SHEETS.SHUBHECHHAK, '_id', id);
+
+        if (member) {
+            try {
+                await googleContacts.deleteContact(member.memberId, member.name, 'Shubhechhak');
+            } catch (syncError) {
+                console.error('Failed to delete Google Contact:', syncError.message);
+            }
+        }
+
         res.json({ message: "Record deleted successfully from Shubhechhak list!" });
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
@@ -1133,3 +1188,50 @@ exports.ping = (req, res) => {
         message: "API is warm and ready!"
     });
 };
+
+// GET: api/MemberData/syncAll
+exports.syncAllToContacts = async (req, res) => {
+    try {
+        const [members, shubhechhaks] = await Promise.all([
+            googleSheets.getRows(SHEETS.MEMBERS),
+            googleSheets.getRows(SHEETS.SHUBHECHHAK)
+        ]);
+
+        console.log(`Starting bulk sync: ${members.length} members, ${shubhechhaks.length} shubhechhaks`);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        // Sync regular members
+        for (const member of members) {
+            try {
+                await googleContacts.syncMember(member, 'Ajivan');
+                successCount++;
+            } catch (e) {
+                console.error(`Failed to sync member ${member.memberId}:`, e.message);
+                failCount++;
+            }
+        }
+
+        // Sync shubhechhaks
+        for (const s of shubhechhaks) {
+            try {
+                await googleContacts.syncMember(s, 'Shubhechhak');
+                successCount++;
+            } catch (e) {
+                console.error(`Failed to sync shubhechhak ${s.memberId}:`, e.message);
+                failCount++;
+            }
+        }
+
+        res.json({
+            message: "Bulk synchronization completed",
+            total: members.length + shubhechhaks.length,
+            success: successCount,
+            failed: failCount
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
